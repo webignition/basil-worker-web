@@ -1,12 +1,15 @@
 language: php
 
+services:
+  - postgresql
+
 php:
   - '7.4'
 
 env:
   global:
     - APP_ENV=test
-    - DATABASE_URL=sqlite:///%kernel.project_dir%/var/data.db
+    - DATABASE_URL=postgresql://postgres@0.0.0.0:5432/basil-worker-db?serverVersion=12&charset=utf8
     - APP_SECRET=Secret!
 
 before_install:
