@@ -7,11 +7,11 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity
  */
-class JobState extends AbstractState
+class TestState extends AbstractState
 {
     public static function create(string $name): self
     {
-        $state = new JobState();
+        $state = new TestState();
         $state->name = $name;
 
         return $state;
