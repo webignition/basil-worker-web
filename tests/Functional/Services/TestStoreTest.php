@@ -6,15 +6,16 @@ namespace App\Tests\Functional\Services;
 
 use App\Entity\Test;
 use App\Entity\TestConfiguration;
-use App\Services\TestConfigurationStore;
+use App\Repository\TestRepository;
 use App\Services\TestStore;
 use App\Tests\AbstractBaseFunctionalTest;
 use App\Tests\Services\TestTestFactory;
-use Doctrine\ORM\EntityManagerInterface;
 
 class TestStoreTest extends AbstractBaseFunctionalTest
 {
     private TestStore $testStore;
+    private TestTestFactory $testFactory;
+    private TestRepository $testRepository;
 
     protected function setUp(): void
     {
@@ -22,120 +23,38 @@ class TestStoreTest extends AbstractBaseFunctionalTest
 
         $store = self::$container->get(TestStore::class);
         self::assertInstanceOf(TestStore::class, $store);
-
         if ($store instanceof TestStore) {
             $this->testStore = $store;
         }
-    }
 
-    public function testFind()
-    {
-        $tests = $this->createTestSet();
-
-        $testIds = [];
-        foreach ($tests as $test) {
-            $testId = $test->getId();
-
-            if (is_int($testId)) {
-                $testIds[] = $testId;
-            }
-        }
-
-        foreach ($testIds as $testId) {
-            self::assertInstanceOf(Test::class, $this->testStore->find($testId));
-        }
-
-        self::assertNull($this->testStore->find(0));
-
-        $minTestId = min($testIds);
-        self::assertNull($this->testStore->find($minTestId - 1));
-
-        $maxTestId = max($testIds);
-        self::assertNull($this->testStore->find($maxTestId + 1));
-    }
-
-    public function testFindAllEmpty()
-    {
-        self::assertSame([], $this->testStore->findAll());
-    }
-
-    public function testFindAllNonEmpty()
-    {
-        $tests = $this->createTestSet();
-
-        self::assertSame($tests, $this->testStore->findAll());
-    }
-
-    public function testFindAllOrdersByPosition()
-    {
-        $entityManager = self::$container->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        $testConfigurationStore = self::$container->get(TestConfigurationStore::class);
-        self::assertInstanceOf(TestConfigurationStore::class, $testConfigurationStore);
-
-        $testConfiguration = $testConfigurationStore->find('chrome', 'http:/example.com');
-
-        $test1 = Test::create($testConfiguration, 'source', 'target', 3, 2);
-        $entityManager->persist($test1);
-        $entityManager->flush();
-
-        $test2 = Test::create($testConfiguration, 'source', 'target', 3, 1);
-        $entityManager->persist($test2);
-        $entityManager->flush();
-
-        $test3 = Test::create($testConfiguration, 'source', 'target', 3, 3);
-        $entityManager->persist($test3);
-        $entityManager->flush();
-
-        self::assertEquals(
-            [
-                $test2,
-                $test1,
-                $test3,
-            ],
-            $this->testStore->findAll()
-        );
-    }
-
-    public function testFindNextAwaiting()
-    {
-        $tests = $this->createTestSet();
-
-        foreach ($tests as $test) {
-            self::assertEquals($test, $this->testStore->findNextAwaiting());
-            $test->setState(Test::STATE_RUNNING);
-            $this->testStore->store($test);
-        }
-    }
-
-    /**
-     * @return Test[]
-     */
-    private function createTestSet(): array
-    {
         $testFactory = self::$container->get(TestTestFactory::class);
         self::assertInstanceOf(TestTestFactory::class, $testFactory);
+        if ($testFactory instanceof TestTestFactory) {
+            $this->testFactory = $testFactory;
+        }
 
-        return [
-            $testFactory->createFoo(
-                TestConfiguration::create('chrome', 'http://example.com'),
-                'Test/test1.yml',
-                'generated/GeneratedTest1.php',
-                3
-            ),
-            $testFactory->createFoo(
-                TestConfiguration::create('chrome', 'http://example.com'),
-                'Test/test2.yml',
-                'generated/GeneratedTest2.php',
-                2
-            ),
-            $testFactory->createFoo(
-                TestConfiguration::create('firefox', 'http://example.com'),
-                'Test/test2.yml',
-                'generated/GeneratedTest3.php',
-                2
-            ),
-        ];
+        $testRepository = self::$container->get(TestRepository::class);
+        self::assertInstanceOf(TestRepository::class, $testRepository);
+        if ($testRepository instanceof TestRepository) {
+            $this->testRepository = $testRepository;
+        }
+    }
+
+    public function testStore()
+    {
+        $test = $this->testFactory->createFoo(
+            TestConfiguration::create('chrome', 'http://example.com'),
+            '/app/source/Test/test.yml',
+            '/app/tests/GeneratedTest.php',
+            1
+        );
+
+        self::assertSame(Test::STATE_AWAITING, $test->getState());
+
+        $test->setState(Test::STATE_RUNNING);
+        $this->testStore->store($test);
+
+        $retrievedTest = $this->testRepository->find($test->getId());
+        self::assertEquals($test, $retrievedTest);
     }
 }

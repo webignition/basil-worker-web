@@ -11,6 +11,7 @@ use App\Event\SourceCompileSuccessEvent;
 use App\EventSubscriber\SourceCompileSuccessEventSubscriber;
 use App\Message\CompileSource;
 use App\Message\ExecuteTest;
+use App\Repository\TestRepository;
 use App\Services\JobStore;
 use App\Services\TestStore;
 use App\Tests\AbstractBaseFunctionalTest;
@@ -71,13 +72,16 @@ class SourceCompileSuccessEventSubscriberTest extends AbstractBaseFunctionalTest
         $messengerTransport = self::$container->get('messenger.transport.async');
         self::assertInstanceOf(InMemoryTransport::class, $messengerTransport);
 
+        $testRepository = self::$container->get(TestRepository::class);
+        self::assertInstanceOf(TestRepository::class, $testRepository);
+
         $setup($this->jobStore, $testStore);
 
-        self::assertCount($expectedInitialTestCount, $testStore->findAll());
+        self::assertCount($expectedInitialTestCount, $testRepository->findAll());
 
         $eventDispatcher->dispatch($event, SourceCompileSuccessEvent::NAME);
 
-        self::assertCount($expectedTestCount, $testStore->findAll());
+        self::assertCount($expectedTestCount, $testRepository->findAll());
 
         $queue = $messengerTransport->get();
         self::assertCount(1, $queue);
@@ -171,31 +175,31 @@ class SourceCompileSuccessEventSubscriberTest extends AbstractBaseFunctionalTest
         $eventDispatcher = self::$container->get(EventDispatcherInterface::class);
         self::assertInstanceOf(EventDispatcherInterface::class, $eventDispatcher);
 
-        $testStore = self::$container->get(TestStore::class);
-        self::assertInstanceOf(TestStore::class, $testStore);
-
         $testFactory = self::$container->get(TestTestFactory::class);
         self::assertInstanceOf(TestTestFactory::class, $testFactory);
 
         $messengerTransport = self::$container->get('messenger.transport.async');
         self::assertInstanceOf(InMemoryTransport::class, $messengerTransport);
 
+        $testRepository = self::$container->get(TestRepository::class);
+        self::assertInstanceOf(TestRepository::class, $testRepository);
+
         $setup($this->jobStore, $testFactory);
         $job = $this->jobStore->getJob();
 
         self::assertNotSame(Job::STATE_EXECUTION_AWAITING, $job->getState());
-        self::assertCount($expectedInitialTestCount, $testStore->findAll());
+        self::assertCount($expectedInitialTestCount, $testRepository->findAll());
 
         $eventDispatcher->dispatch($event, SourceCompileSuccessEvent::NAME);
 
-        self::assertCount($expectedTestCount, $testStore->findAll());
+        self::assertCount($expectedTestCount, $testRepository->findAll());
         self::assertSame(Job::STATE_EXECUTION_AWAITING, $job->getState());
 
         $queue = $messengerTransport->get();
         self::assertCount(1, $queue);
         self::assertIsArray($queue);
 
-        $nextAwaitingTest = $testStore->findNextAwaiting();
+        $nextAwaitingTest = $testRepository->findNextAwaiting();
         $nextAwaitingTestId = $nextAwaitingTest instanceof Test ? (int) $nextAwaitingTest->getId() : 0;
 
         $expectedQueuedMessage = new ExecuteTest($nextAwaitingTestId);
