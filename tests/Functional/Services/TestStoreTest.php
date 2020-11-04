@@ -9,9 +9,8 @@ use App\Entity\TestConfiguration;
 use App\Services\TestConfigurationStore;
 use App\Services\TestStore;
 use App\Tests\AbstractBaseFunctionalTest;
+use App\Tests\Services\TestTestFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use webignition\BasilCompilerModels\TestManifest;
-use webignition\BasilModels\Test\Configuration;
 
 class TestStoreTest extends AbstractBaseFunctionalTest
 {
@@ -99,16 +98,6 @@ class TestStoreTest extends AbstractBaseFunctionalTest
         );
     }
 
-    public function testCreate()
-    {
-        $tests = $this->createTestSet();
-
-        foreach ($tests as $testIndex => $test) {
-            $expectedPosition = $testIndex + 1;
-            self::assertSame($expectedPosition, $test->getPosition());
-        }
-    }
-
     public function testFindNextAwaiting()
     {
         $tests = $this->createTestSet();
@@ -120,95 +109,33 @@ class TestStoreTest extends AbstractBaseFunctionalTest
         }
     }
 
-    public function testCreateFromTestManifest()
-    {
-        $testConfigurationStore = self::$container->get(TestConfigurationStore::class);
-        self::assertInstanceOf(TestConfigurationStore::class, $testConfigurationStore);
-
-        $manifest = new TestManifest(
-            new Configuration('chrome', 'http://example.com'),
-            'Tests/test.yml',
-            '/app/tests/GeneratedTest.php',
-            2
-        );
-
-        $test = $this->testStore->createFromTestManifest($manifest);
-
-        $this->assertTestMatchesManifest($manifest, $test);
-        self::assertSame(1, $test->getPosition());
-    }
-
-    public function testCreateFromTestManifests()
-    {
-        $manifest1 = new TestManifest(
-            new Configuration('chrome', 'http://example.com'),
-            'Tests/test.yml',
-            '/app/tests/GeneratedChromeTest.php',
-            2
-        );
-
-        $manifest2 = new TestManifest(
-            new Configuration('firefox', 'http://example.com'),
-            'Tests/test.yml',
-            '/app/tests/GeneratedFirefoxTest.php',
-            2
-        );
-
-        $manifests = [
-            $manifest1,
-            $manifest2,
-        ];
-
-        $tests = $this->testStore->createFromTestManifests($manifests);
-
-        foreach ($tests as $testIndex => $test) {
-            $this->assertTestMatchesManifest($manifests[$testIndex], $test);
-            self::assertSame($testIndex + 1, $test->getPosition());
-        }
-    }
-
     /**
      * @return Test[]
      */
     private function createTestSet(): array
     {
+        $testFactory = self::$container->get(TestTestFactory::class);
+        self::assertInstanceOf(TestTestFactory::class, $testFactory);
+
         return [
-            $this->testStore->create(
+            $testFactory->createFoo(
                 TestConfiguration::create('chrome', 'http://example.com'),
                 'Test/test1.yml',
                 'generated/GeneratedTest1.php',
                 3
             ),
-            $this->testStore->create(
+            $testFactory->createFoo(
                 TestConfiguration::create('chrome', 'http://example.com'),
                 'Test/test2.yml',
                 'generated/GeneratedTest2.php',
                 2
             ),
-            $this->testStore->create(
+            $testFactory->createFoo(
                 TestConfiguration::create('firefox', 'http://example.com'),
                 'Test/test2.yml',
                 'generated/GeneratedTest3.php',
                 2
             ),
         ];
-    }
-
-    private function assertTestMatchesManifest(TestManifest $manifest, Test $test): void
-    {
-        $testConfigurationStore = self::$container->get(TestConfigurationStore::class);
-        self::assertInstanceOf(TestConfigurationStore::class, $testConfigurationStore);
-
-        $manifestConfiguration = $manifest->getConfiguration();
-
-        self::assertInstanceOf(Test::class, $test);
-        self::assertIsInt($test->getId());
-        self::assertSame(
-            $testConfigurationStore->find($manifestConfiguration->getBrowser(), $manifestConfiguration->getUrl()),
-            $test->getConfiguration()
-        );
-        self::assertSame($manifest->getSource(), $test->getSource());
-        self::assertSame($manifest->getTarget(), $test->getTarget());
-        self::assertSame($manifest->getStepCount(), $test->getStepCount());
     }
 }

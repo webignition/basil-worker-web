@@ -54,6 +54,9 @@ services:
     App\EventSubscriber\TestExecuteCompleteEventSubscriber:
         public: true
 
+    App\Services\TestFactory:
+        public: true
+
     App\Tests\Services\BasilFixtureHandler:
         public: true
         arguments:
@@ -86,4 +89,7 @@ services:
             $client: '@test.client'
 
     App\Tests\Services\UploadedFileFactory:
+        public: true
+
+    App\Tests\Services\TestTestFactory:
         public: true
