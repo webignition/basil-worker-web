@@ -8,8 +8,8 @@ use App\Services\CallbackResponseHandler;
 use App\Services\CallbackSender;
 use App\Services\JobStore;
 use App\Tests\AbstractBaseFunctionalTest;
-use App\Tests\Mock\Model\Callback\MockCallback;
 use App\Tests\Mock\Services\MockCallbackResponseHandler;
+use App\Tests\Model\TestCallback;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Response;
@@ -41,11 +41,11 @@ class CallbackSenderTest extends AbstractBaseFunctionalTest
     }
 
     /**
-     * @dataProvider handleResponseReceivedDataProvider
+     * @dataProvider sendResponseReceivedDataProvider
      */
-    public function testHandleResponseReceived(ResponseInterface $response)
+    public function testSendResponseReceived(ResponseInterface $response)
     {
-        $callback = MockCallback::createEmpty();
+        $callback = new TestCallback();
 
         $this->mockHandler->append($response);
 
@@ -61,7 +61,7 @@ class CallbackSenderTest extends AbstractBaseFunctionalTest
         $this->callbackSender->send($callback);
     }
 
-    public function handleResponseReceivedDataProvider(): array
+    public function sendResponseReceivedDataProvider(): array
     {
         return [
             'HTTP 200' => [
@@ -82,7 +82,21 @@ class CallbackSenderTest extends AbstractBaseFunctionalTest
 
         $this->setCallbackResponseHandlerOnCallbackSender($responseHandler);
 
-        $this->callbackSender->send(MockCallback::createEmpty());
+        $this->callbackSender->send(new TestCallback());
+    }
+
+    public function testSendCallbackRetryLimitReached()
+    {
+        $retryLimit = (int) self::$container->getParameter('callback_retry_limit');
+
+        $responseHandler = (new MockCallbackResponseHandler())
+            ->withoutHandleResponseCall()
+            ->withoutHandleClientExceptionCall()
+            ->getMock();
+
+        $this->setCallbackResponseHandlerOnCallbackSender($responseHandler);
+
+        $this->callbackSender->send(new TestCallback($retryLimit));
     }
 
     /**
@@ -94,7 +108,7 @@ class CallbackSenderTest extends AbstractBaseFunctionalTest
 
         $this->mockHandler->append($exception);
 
-        $callback = MockCallback::createEmpty();
+        $callback = new TestCallback();
 
         $responseHandler = (new MockCallbackResponseHandler())
             ->withoutHandleResponseCall()
