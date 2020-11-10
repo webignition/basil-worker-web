@@ -33,9 +33,6 @@ services:
     App\Services\CompilationWorkflowHandler:
         public: true
 
-    App\EventSubscriber\TestExecuteDocumentReceivedEventSubscriber:
-        public: true
-
     App\Services\TestExecutor:
         public: true
         arguments:
@@ -53,19 +50,10 @@ services:
     App\Services\ExecutionWorkflowFactory:
         public: true
 
-    App\EventSubscriber\TestExecuteCompleteEventSubscriber:
-        public: true
-
     App\Services\TestFactory:
         public: true
 
     App\Services\CallbackResponseHandler:
-        public: true
-
-    App\EventSubscriber\CallbackHttpResponseEventSubscriber:
-        public: true
-
-    App\EventSubscriber\CallbackHttpExceptionEventSubscriber:
         public: true
 
     App\Services\SourceCompileEventDispatcher:
@@ -74,10 +62,10 @@ services:
     App\EventSubscriber\TestFailedEventSubscriber:
         public: true
 
-    App\EventSubscriber\JobCompletedEventSubscriber:
+    App\MessageDispatcher\SendCallbackMessageDispatcher:
         public: true
 
-    App\EventSubscriber\JobCancelledEventSubscriber:
+    App\Services\TestCanceller:
         public: true
 
     App\Tests\Services\BasilFixtureHandler:
