@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Synchronous\EndToEnd;
 
 use App\Entity\Job;
-use App\Services\JobStore;
-use App\Tests\Integration\AbstractBaseIntegrationTest;
-use App\Tests\Services\BasilFixtureHandler;
-use App\Tests\Services\ClientRequestSender;
+use App\Tests\Integration\AbstractEndToEndTest;
+use App\Tests\Model\EndToEndJob\Invokable;
+use App\Tests\Model\EndToEndJob\JobConfiguration;
 use App\Tests\Services\Integration\HttpLogReader;
 use App\Tests\Services\SourceStoreInitializer;
-use App\Tests\Services\UploadedFileFactory;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
@@ -19,41 +17,13 @@ use Psr\Http\Message\ResponseInterface;
 use webignition\HttpHistoryContainer\Collection\HttpTransactionCollection;
 use webignition\HttpHistoryContainer\Transaction\HttpTransaction;
 
-class CreateAddSourcesCompileExecuteTest extends AbstractBaseIntegrationTest
+class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
 {
-    private ClientRequestSender $clientRequestSender;
-    private JobStore $jobStore;
-    private UploadedFileFactory $uploadedFileFactory;
-    private BasilFixtureHandler $basilFixtureHandler;
     private HttpLogReader $httpLogReader;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $clientRequestSender = self::$container->get(ClientRequestSender::class);
-        self::assertInstanceOf(ClientRequestSender::class, $clientRequestSender);
-        if ($clientRequestSender instanceof ClientRequestSender) {
-            $this->clientRequestSender = $clientRequestSender;
-        }
-
-        $jobStore = self::$container->get(JobStore::class);
-        self::assertInstanceOf(JobStore::class, $jobStore);
-        if ($jobStore instanceof JobStore) {
-            $this->jobStore = $jobStore;
-        }
-
-        $uploadedFileFactory = self::$container->get(UploadedFileFactory::class);
-        self::assertInstanceOf(UploadedFileFactory::class, $uploadedFileFactory);
-        if ($uploadedFileFactory instanceof UploadedFileFactory) {
-            $this->uploadedFileFactory = $uploadedFileFactory;
-        }
-
-        $basilFixtureHandler = self::$container->get(BasilFixtureHandler::class);
-        self::assertInstanceOf(BasilFixtureHandler::class, $basilFixtureHandler);
-        if ($basilFixtureHandler instanceof BasilFixtureHandler) {
-            $this->basilFixtureHandler = $basilFixtureHandler;
-        }
 
         $httpLogReader = self::$container->get(HttpLogReader::class);
         self::assertInstanceOf(HttpLogReader::class, $httpLogReader);
@@ -67,47 +37,39 @@ class CreateAddSourcesCompileExecuteTest extends AbstractBaseIntegrationTest
     /**
      * @dataProvider createAddSourcesCompileExecuteDataProvider
      *
-     * @param string $label
-     * @param string $callbackUrl
-     * @param string $manifestPath
-     * @param string[] $sourcePaths
+     * @param JobConfiguration $jobConfiguration
+     * @param string[] $expectedSourcePaths
      * @param HttpTransactionCollection $expectedHttpTransactions
      */
     public function testCreateAddSourcesCompileExecute(
-        string $label,
-        string $callbackUrl,
-        string $manifestPath,
-        array $sourcePaths,
+        JobConfiguration $jobConfiguration,
+        array $expectedSourcePaths,
         HttpTransactionCollection $expectedHttpTransactions
     ) {
-        $createJobResponse = $this->clientRequestSender->createJob($label, $callbackUrl);
-        self::assertSame(200, $createJobResponse->getStatusCode());
-        self::assertTrue($this->jobStore->hasJob());
+        $this->doCreateJobAddSourcesTest(
+            $jobConfiguration,
+            $expectedSourcePaths,
+            Invokable::createEmpty(),
+            Job::STATE_EXECUTION_COMPLETE,
+            new Invokable(
+                function (HttpTransactionCollection $expectedHttpTransactions) {
+                    $transactions = $this->httpLogReader->getTransactions();
+                    $this->httpLogReader->reset();
 
-        $job = $this->jobStore->getJob();
-        self::assertSame(Job::STATE_COMPILATION_AWAITING, $job->getState());
+                    self::assertCount(count($expectedHttpTransactions), $transactions);
 
-        $addJobSourcesResponse = $this->clientRequestSender->addJobSources(
-            $this->uploadedFileFactory->createForManifest($manifestPath),
-            $this->basilFixtureHandler->createUploadFileCollection($sourcePaths)
+                    foreach ($expectedHttpTransactions as $transactionIndex => $expectedTransaction) {
+                        $transaction = $transactions->get($transactionIndex);
+                        self::assertInstanceOf(HttpTransaction::class, $transaction);
+
+                        $this->assertTransactionsAreEquivalent($expectedTransaction, $transaction, $transactionIndex);
+                    }
+                },
+                [
+                    $expectedHttpTransactions,
+                ]
+            )
         );
-        self::assertSame(200, $addJobSourcesResponse->getStatusCode());
-
-        $job = $this->jobStore->getJob();
-        self::assertSame($sourcePaths, $job->getSources());
-        self::assertSame(Job::STATE_EXECUTION_COMPLETE, $job->getState());
-
-        $transactions = $this->httpLogReader->getTransactions();
-        $this->httpLogReader->reset();
-
-        self::assertCount(count($expectedHttpTransactions), $transactions);
-
-        foreach ($expectedHttpTransactions as $transactionIndex => $expectedTransaction) {
-            $transaction = $transactions->get($transactionIndex);
-            self::assertInstanceOf(HttpTransaction::class, $transaction);
-
-            $this->assertTransactionsAreEquivalent($expectedTransaction, $transaction, $transactionIndex);
-        }
     }
 
     public function createAddSourcesCompileExecuteDataProvider(): array
@@ -117,10 +79,12 @@ class CreateAddSourcesCompileExecuteTest extends AbstractBaseIntegrationTest
 
         return [
             'default' => [
-                'label' => $label,
-                'callbackUrl' => 'http://example.com/callback/1',
-                'manifestPath' => getcwd() . '/tests/Fixtures/Manifest/manifest.txt',
-                'sourcePaths' => [
+                'jobConfiguration' => new JobConfiguration(
+                    $label,
+                    $callbackUrl,
+                    getcwd() . '/tests/Fixtures/Manifest/manifest.txt'
+                ),
+                'expectedSourcePaths' => [
                     'Test/chrome-open-index.yml',
                     'Test/chrome-firefox-open-index.yml',
                     'Test/chrome-open-form.yml',

@@ -7,48 +7,18 @@ namespace App\Tests\Integration\Asynchronous\EndToEnd;
 use App\Entity\Job;
 use App\Entity\Test;
 use App\Repository\TestRepository;
-use App\Services\JobStore;
-use App\Tests\Integration\AbstractBaseIntegrationTest;
-use App\Tests\Services\BasilFixtureHandler;
-use App\Tests\Services\ClientRequestSender;
+use App\Tests\Integration\AbstractEndToEndTest;
+use App\Tests\Model\EndToEndJob\Invokable;
+use App\Tests\Model\EndToEndJob\JobConfiguration;
 use App\Tests\Services\SourceStoreInitializer;
-use App\Tests\Services\UploadedFileFactory;
 
-class CreateAddSourcesCompileExecuteTest extends AbstractBaseIntegrationTest
+class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
 {
-    private ClientRequestSender $clientRequestSender;
-    private JobStore $jobStore;
-    private UploadedFileFactory $uploadedFileFactory;
-    private BasilFixtureHandler $basilFixtureHandler;
     private TestRepository $testRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $clientRequestSender = self::$container->get(ClientRequestSender::class);
-        self::assertInstanceOf(ClientRequestSender::class, $clientRequestSender);
-        if ($clientRequestSender instanceof ClientRequestSender) {
-            $this->clientRequestSender = $clientRequestSender;
-        }
-
-        $jobStore = self::$container->get(JobStore::class);
-        self::assertInstanceOf(JobStore::class, $jobStore);
-        if ($jobStore instanceof JobStore) {
-            $this->jobStore = $jobStore;
-        }
-
-        $uploadedFileFactory = self::$container->get(UploadedFileFactory::class);
-        self::assertInstanceOf(UploadedFileFactory::class, $uploadedFileFactory);
-        if ($uploadedFileFactory instanceof UploadedFileFactory) {
-            $this->uploadedFileFactory = $uploadedFileFactory;
-        }
-
-        $basilFixtureHandler = self::$container->get(BasilFixtureHandler::class);
-        self::assertInstanceOf(BasilFixtureHandler::class, $basilFixtureHandler);
-        if ($basilFixtureHandler instanceof BasilFixtureHandler) {
-            $this->basilFixtureHandler = $basilFixtureHandler;
-        }
 
         $testRepository = self::$container->get(TestRepository::class);
         self::assertInstanceOf(TestRepository::class, $testRepository);
@@ -62,62 +32,58 @@ class CreateAddSourcesCompileExecuteTest extends AbstractBaseIntegrationTest
     /**
      * @dataProvider createAddSourcesCompileExecuteDataProvider
      *
-     * @param string $label
-     * @param string $callbackUrl
-     * @param string $manifestPath
-     * @param string[] $sourcePaths
+     * @param JobConfiguration $jobConfiguration
+     * @param string[] $expectedSourcePaths
      * @param Job::STATE_* $expectedJobEndState
      * @param array<Test::STATE_*> $expectedTestEndStates
      */
     public function testCreateAddSourcesCompileExecute(
-        string $label,
-        string $callbackUrl,
-        string $manifestPath,
-        array $sourcePaths,
+        JobConfiguration $jobConfiguration,
+        array $expectedSourcePaths,
         string $expectedJobEndState,
         array $expectedTestEndStates
     ) {
-        $createJobResponse = $this->clientRequestSender->createJob($label, $callbackUrl);
-        self::assertSame(200, $createJobResponse->getStatusCode());
-        self::assertTrue($this->jobStore->hasJob());
+        $this->doCreateJobAddSourcesTest(
+            $jobConfiguration,
+            $expectedSourcePaths,
+            new Invokable(
+                function (Job $job, string $expectedJobEndState) {
+                    $this->entityManager->refresh($job);
 
-        $job = $this->jobStore->getJob();
-        self::assertSame(Job::STATE_COMPILATION_AWAITING, $job->getState());
+                    return $expectedJobEndState === $job->getState();
+                },
+                [
+                    $expectedJobEndState,
+                ]
+            ),
+            $expectedJobEndState,
+            new Invokable(
+                function (array $expectedTestEndStates) {
+                    $tests = $this->testRepository->findAll();
+                    self::assertCount(count($expectedTestEndStates), $tests);
 
-        $addJobSourcesResponse = $this->clientRequestSender->addJobSources(
-            $this->uploadedFileFactory->createForManifest($manifestPath),
-            $this->basilFixtureHandler->createUploadFileCollection($sourcePaths)
+                    foreach ($tests as $testIndex => $test) {
+                        $expectedTestEndState = $expectedTestEndStates[$testIndex] ?? null;
+                        self::assertSame($expectedTestEndState, $test->getState());
+                    }
+                },
+                [
+                    $expectedTestEndStates,
+                ]
+            )
         );
-        self::assertSame(200, $addJobSourcesResponse->getStatusCode());
-
-        $job = $this->jobStore->getJob();
-        self::assertSame($sourcePaths, $job->getSources());
-
-        $this->waitUntil(function () use ($job, $expectedJobEndState): bool {
-            $this->entityManager->refresh($job);
-
-            return $expectedJobEndState === $job->getState();
-        });
-
-        self::assertSame($expectedJobEndState, $job->getState());
-
-        $tests = $this->testRepository->findAll();
-        self::assertCount(count($expectedTestEndStates), $tests);
-
-        foreach ($tests as $testIndex => $test) {
-            $expectedTestEndState = $expectedTestEndStates[$testIndex] ?? null;
-            self::assertSame($expectedTestEndState, $test->getState());
-        }
     }
 
     public function createAddSourcesCompileExecuteDataProvider(): array
     {
         return [
             'default' => [
-                'label' => md5('label content'),
-                'callbackUrl' => 'http://example.com/callback',
-                'manifestPath' => getcwd() . '/tests/Fixtures/Manifest/manifest.txt',
-                'sourcePaths' => [
+                'jobConfiguration' => new JobConfiguration(
+                    md5('label content'),
+                    'http://example.com/callback',
+                    getcwd() . '/tests/Fixtures/Manifest/manifest.txt'
+                ),
+                'expectedSourcePaths' => [
                     'Test/chrome-open-index.yml',
                     'Test/chrome-firefox-open-index.yml',
                     'Test/chrome-open-form.yml',
@@ -140,25 +106,5 @@ class CreateAddSourcesCompileExecuteTest extends AbstractBaseIntegrationTest
         if ($sourceStoreInitializer instanceof SourceStoreInitializer) {
             $sourceStoreInitializer->initialize();
         }
-    }
-
-    private function waitUntil(callable $callable, int $maxDurationInSeconds = 30): bool
-    {
-        $duration = 0;
-        $maxDuration = $maxDurationInSeconds * 1000000;
-        $maxDurationReached = $duration >= $maxDuration;
-        $intervalInMicroseconds = 100000;
-
-        while (false === $callable() && false === $maxDurationReached) {
-            usleep($intervalInMicroseconds);
-            $duration += $intervalInMicroseconds;
-            $maxDurationReached = $duration >= $maxDuration;
-
-            if ($maxDurationReached) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

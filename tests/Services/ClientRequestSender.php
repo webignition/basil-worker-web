@@ -30,6 +30,7 @@ class ClientRequestSender
     }
 
     /**
+     * @param UploadedFile $manifest
      * @param UploadedFile[] $sourceUploadedFiles
      *
      * @return Response
