@@ -6,7 +6,7 @@ namespace App\Tests\Integration;
 
 use App\Entity\Job;
 use App\Services\JobStore;
-use App\Tests\Model\EndToEndJob\Invokable;
+use App\Tests\Model\EndToEndJob\InvokableInterface;
 use App\Tests\Model\EndToEndJob\JobConfiguration;
 use App\Tests\Services\BasilFixtureHandler;
 use App\Tests\Services\ClientRequestSender;
@@ -56,16 +56,16 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
     /**
      * @param JobConfiguration $jobConfiguration
      * @param string[] $expectedSourcePaths
-     * @param Invokable $waitUntil
+     * @param InvokableInterface $waitUntil
      * @param Job::STATE_* $expectedJobEndState
-     * @param Invokable $postAssertions
+     * @param InvokableInterface $postAssertions
      */
     protected function doCreateJobAddSourcesTest(
         JobConfiguration $jobConfiguration,
         array $expectedSourcePaths,
-        Invokable $waitUntil,
+        InvokableInterface $waitUntil,
         string $expectedJobEndState,
-        Invokable $postAssertions
+        InvokableInterface $postAssertions
     ): void {
         $this->createJob($jobConfiguration->getLabel(), $jobConfiguration->getCallbackUrl());
 
@@ -84,6 +84,14 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
         );
 
         self::assertSame($expectedJobEndState, $job->getState());
+
+        foreach ($postAssertions->getServiceReferences() as $serviceReference) {
+            $service = self::$container->get($serviceReference->getId());
+            if (null !== $service) {
+                $postAssertions->replaceServiceReference($serviceReference, $service);
+            }
+        }
+
         $postAssertions();
     }
 

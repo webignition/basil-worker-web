@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Synchronous\EndToEnd;
 
 use App\Entity\Job;
+use App\Entity\Test;
 use App\Tests\Integration\AbstractEndToEndTest;
 use App\Tests\Model\EndToEndJob\Invokable;
+use App\Tests\Model\EndToEndJob\InvokableCollection;
+use App\Tests\Model\EndToEndJob\InvokableInterface;
 use App\Tests\Model\EndToEndJob\JobConfiguration;
+use App\Tests\Model\EndToEndJob\ServiceReference;
 use App\Tests\Services\Integration\HttpLogReader;
-use App\Tests\Services\SourceStoreInitializer;
+use App\Tests\Services\TestTestRepository;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
@@ -19,56 +23,26 @@ use webignition\HttpHistoryContainer\Transaction\HttpTransaction;
 
 class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
 {
-    private HttpLogReader $httpLogReader;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $httpLogReader = self::$container->get(HttpLogReader::class);
-        self::assertInstanceOf(HttpLogReader::class, $httpLogReader);
-        if ($httpLogReader instanceof HttpLogReader) {
-            $this->httpLogReader = $httpLogReader;
-        }
-
-        $this->initializeSourceStore();
-    }
-
     /**
      * @dataProvider createAddSourcesCompileExecuteDataProvider
      *
      * @param JobConfiguration $jobConfiguration
      * @param string[] $expectedSourcePaths
-     * @param HttpTransactionCollection $expectedHttpTransactions
+     * @param Job::STATE_* $expectedJobEndState
+     * @param InvokableInterface $postAssertions
      */
     public function testCreateAddSourcesCompileExecute(
         JobConfiguration $jobConfiguration,
         array $expectedSourcePaths,
-        HttpTransactionCollection $expectedHttpTransactions
+        string $expectedJobEndState,
+        InvokableInterface $postAssertions
     ) {
         $this->doCreateJobAddSourcesTest(
             $jobConfiguration,
             $expectedSourcePaths,
             Invokable::createEmpty(),
-            Job::STATE_EXECUTION_COMPLETE,
-            new Invokable(
-                function (HttpTransactionCollection $expectedHttpTransactions) {
-                    $transactions = $this->httpLogReader->getTransactions();
-                    $this->httpLogReader->reset();
-
-                    self::assertCount(count($expectedHttpTransactions), $transactions);
-
-                    foreach ($expectedHttpTransactions as $transactionIndex => $expectedTransaction) {
-                        $transaction = $transactions->get($transactionIndex);
-                        self::assertInstanceOf(HttpTransaction::class, $transaction);
-
-                        $this->assertTransactionsAreEquivalent($expectedTransaction, $transaction, $transactionIndex);
-                    }
-                },
-                [
-                    $expectedHttpTransactions,
-                ]
-            )
+            $expectedJobEndState,
+            $postAssertions
         );
     }
 
@@ -89,114 +63,239 @@ class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
                     'Test/chrome-firefox-open-index.yml',
                     'Test/chrome-open-form.yml',
                 ],
-                'expectedHttpTransactions' => $this->createHttpTransactionCollection([
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'test',
-                            'path' => 'Test/chrome-open-index.yml',
-                            'config' => [
-                                'browser' => 'chrome',
-                                'url' => 'http://nginx/index.html',
-                            ],
-                        ]),
-                        new Response()
-                    ),
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'step',
-                            'name' => 'verify page is open',
-                            'status' => 'passed',
-                            'statements' => [
-                                [
-                                    'type' => 'assertion',
-                                    'source' => '$page.url is "http://nginx/index.html"',
+                'expectedJobEndState' => Job::STATE_EXECUTION_COMPLETE,
+                'postAssertions' => new Invokable(
+                    function (HttpTransactionCollection $expectedHttpTransactions, HttpLogReader $httpLogReader) {
+                        $transactions = $httpLogReader->getTransactions();
+                        $httpLogReader->reset();
+
+                        self::assertCount(count($expectedHttpTransactions), $transactions);
+                        $this->assertTransactionCollectionsAreEquivalent($expectedHttpTransactions, $transactions);
+                    },
+                    [
+                        $this->createHttpTransactionCollection([
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'test',
+                                    'path' => 'Test/chrome-open-index.yml',
+                                    'config' => [
+                                        'browser' => 'chrome',
+                                        'url' => 'http://nginx/index.html',
+                                    ],
+                                ]),
+                                new Response()
+                            ),
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'step',
+                                    'name' => 'verify page is open',
                                     'status' => 'passed',
-                                ],
-                            ],
-                        ]),
-                        new Response()
-                    ),
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'test',
-                            'path' => 'Test/chrome-firefox-open-index.yml',
-                            'config' => [
-                                'browser' => 'chrome',
-                                'url' => 'http://nginx/index.html',
-                            ],
-                        ]),
-                        new Response()
-                    ),
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'step',
-                            'name' => 'verify page is open',
-                            'status' => 'passed',
-                            'statements' => [
-                                [
-                                    'type' => 'assertion',
-                                    'source' => '$page.url is "http://nginx/index.html"',
+                                    'statements' => [
+                                        [
+                                            'type' => 'assertion',
+                                            'source' => '$page.url is "http://nginx/index.html"',
+                                            'status' => 'passed',
+                                        ],
+                                    ],
+                                ]),
+                                new Response()
+                            ),
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'test',
+                                    'path' => 'Test/chrome-firefox-open-index.yml',
+                                    'config' => [
+                                        'browser' => 'chrome',
+                                        'url' => 'http://nginx/index.html',
+                                    ],
+                                ]),
+                                new Response()
+                            ),
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'step',
+                                    'name' => 'verify page is open',
                                     'status' => 'passed',
-                                ],
-                            ],
-                        ]),
-                        new Response()
-                    ),
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'test',
-                            'path' => 'Test/chrome-firefox-open-index.yml',
-                            'config' => [
-                                'browser' => 'firefox',
-                                'url' => 'http://nginx/index.html',
-                            ],
-                        ]),
-                        new Response()
-                    ),
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'step',
-                            'name' => 'verify page is open',
-                            'status' => 'passed',
-                            'statements' => [
-                                [
-                                    'type' => 'assertion',
-                                    'source' => '$page.url is "http://nginx/index.html"',
+                                    'statements' => [
+                                        [
+                                            'type' => 'assertion',
+                                            'source' => '$page.url is "http://nginx/index.html"',
+                                            'status' => 'passed',
+                                        ],
+                                    ],
+                                ]),
+                                new Response()
+                            ),
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'test',
+                                    'path' => 'Test/chrome-firefox-open-index.yml',
+                                    'config' => [
+                                        'browser' => 'firefox',
+                                        'url' => 'http://nginx/index.html',
+                                    ],
+                                ]),
+                                new Response()
+                            ),
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'step',
+                                    'name' => 'verify page is open',
                                     'status' => 'passed',
-                                ],
-                            ],
-                        ]),
-                        new Response()
-                    ),
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'test',
-                            'path' => 'Test/chrome-open-form.yml',
-                            'config' => [
-                                'browser' => 'chrome',
-                                'url' => 'http://nginx/form.html',
-                            ],
-                        ]),
-                        new Response()
-                    ),
-                    $this->createHttpTransaction(
-                        $this->createExpectedRequest($label, $callbackUrl, [
-                            'type' => 'step',
-                            'name' => 'verify page is open',
-                            'status' => 'passed',
-                            'statements' => [
-                                [
-                                    'type' => 'assertion',
-                                    'source' => '$page.url is "http://nginx/form.html"',
+                                    'statements' => [
+                                        [
+                                            'type' => 'assertion',
+                                            'source' => '$page.url is "http://nginx/index.html"',
+                                            'status' => 'passed',
+                                        ],
+                                    ],
+                                ]),
+                                new Response()
+                            ),
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'test',
+                                    'path' => 'Test/chrome-open-form.yml',
+                                    'config' => [
+                                        'browser' => 'chrome',
+                                        'url' => 'http://nginx/form.html',
+                                    ],
+                                ]),
+                                new Response()
+                            ),
+                            $this->createHttpTransaction(
+                                $this->createExpectedRequest($label, $callbackUrl, [
+                                    'type' => 'step',
+                                    'name' => 'verify page is open',
                                     'status' => 'passed',
-                                ],
-                            ],
+                                    'statements' => [
+                                        [
+                                            'type' => 'assertion',
+                                            'source' => '$page.url is "http://nginx/form.html"',
+                                            'status' => 'passed',
+                                        ],
+                                    ],
+                                ]),
+                                new Response()
+                            ),
                         ]),
-                        new Response()
+                        new ServiceReference(HttpLogReader::class),
+                    ]
+                ),
+            ],
+            'step failed' => [
+                'jobConfiguration' => new JobConfiguration(
+                    $label,
+                    $callbackUrl,
+                    getcwd() . '/tests/Fixtures/Manifest/manifest-step-failure.txt'
+                ),
+                'expectedSourcePaths' => [
+                    'Test/chrome-open-index-with-step-failure.yml',
+                    'Test/chrome-open-index.yml',
+                ],
+                'expectedJobEndState' => Job::STATE_EXECUTION_CANCELLED,
+                'postAssertions' => new InvokableCollection([
+                    'verify http transactions' => new Invokable(
+                        function (HttpTransactionCollection $expectedHttpTransactions, HttpLogReader $httpLogReader) {
+                            $transactions = $httpLogReader->getTransactions();
+                            $httpLogReader->reset();
+
+                            self::assertCount(count($expectedHttpTransactions), $transactions);
+                            $this->assertTransactionCollectionsAreEquivalent($expectedHttpTransactions, $transactions);
+                        },
+                        [
+                            $this->createHttpTransactionCollection([
+                                $this->createHttpTransaction(
+                                    $this->createExpectedRequest($label, $callbackUrl, [
+                                        'type' => 'test',
+                                        'path' => 'Test/chrome-open-index-with-step-failure.yml',
+                                        'config' => [
+                                            'browser' => 'chrome',
+                                            'url' => 'http://nginx/index.html',
+                                        ],
+                                    ]),
+                                    new Response()
+                                ),
+                                $this->createHttpTransaction(
+                                    $this->createExpectedRequest($label, $callbackUrl, [
+                                        'type' => 'step',
+                                        'name' => 'verify page is open',
+                                        'status' => 'passed',
+                                        'statements' => [
+                                            [
+                                                'type' => 'assertion',
+                                                'source' => '$page.url is "http://nginx/index.html"',
+                                                'status' => 'passed',
+                                            ],
+                                        ],
+                                    ]),
+                                    new Response()
+                                ),
+                                $this->createHttpTransaction(
+                                    $this->createExpectedRequest($label, $callbackUrl, [
+                                        'type' => 'step',
+                                        'name' => 'fail on intentionally-missing element',
+                                        'status' => 'failed',
+                                        'statements' => [
+                                            [
+                                                'type' => 'assertion',
+                                                'source' => '$".non-existent" exists',
+                                                'status' => 'failed',
+                                                'summary' => [
+                                                    'operator' => 'exists',
+                                                    'source' => [
+                                                        'type' => 'node',
+                                                        'body' => [
+                                                            'type' => 'element',
+                                                            'identifier' => [
+                                                                'source' => '$".non-existent"',
+                                                                'properties' => [
+                                                                    'type' => 'css',
+                                                                    'locator' => '.non-existent',
+                                                                    'position' => 1,
+                                                                ],
+                                                            ],
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                        ],
+                                    ]),
+                                    new Response()
+                                ),
+                            ]),
+                            new ServiceReference(HttpLogReader::class),
+                        ]
+                    ),
+                    'verify test states' => new Invokable(
+                        function (TestTestRepository $testTestRepository) {
+                            self::assertSame(
+                                $testTestRepository->getStates(),
+                                [
+                                    Test::STATE_FAILED,
+                                    Test::STATE_CANCELLED,
+                                ]
+                            );
+                        },
+                        [
+                            new ServiceReference(TestTestRepository::class),
+                        ]
                     ),
                 ]),
             ],
         ];
+    }
+
+    private function assertTransactionCollectionsAreEquivalent(
+        HttpTransactionCollection $expectedHttpTransactions,
+        HttpTransactionCollection $transactions
+    ): void {
+        foreach ($expectedHttpTransactions as $transactionIndex => $expectedTransaction) {
+            $transaction = $transactions->get($transactionIndex);
+            self::assertInstanceOf(HttpTransaction::class, $transaction);
+
+            $this->assertTransactionsAreEquivalent($expectedTransaction, $transaction, $transactionIndex);
+        }
     }
 
     private function assertTransactionsAreEquivalent(
@@ -262,15 +361,6 @@ class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
             $actual->getStatusCode(),
             'Status code of response at index ' . $transactionIndex . ' not as expected'
         );
-    }
-
-    private function initializeSourceStore(): void
-    {
-        $sourceStoreInitializer = self::$container->get(SourceStoreInitializer::class);
-        self::assertInstanceOf(SourceStoreInitializer::class, $sourceStoreInitializer);
-        if ($sourceStoreInitializer instanceof SourceStoreInitializer) {
-            $sourceStoreInitializer->initialize();
-        }
     }
 
     /**
