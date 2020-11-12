@@ -1,3 +1,6 @@
+imports:
+    - { resource: services/test_common.yaml }
+
 services:
     _defaults:
         autowire: true
@@ -59,22 +62,10 @@ services:
     App\Services\SourceCompileEventDispatcher:
         public: true
 
-    App\EventSubscriber\TestFailedEventSubscriber:
-        public: true
-
     App\MessageDispatcher\SendCallbackMessageDispatcher:
         public: true
 
     App\Services\TestCanceller:
-        public: true
-
-    App\Tests\Services\BasilFixtureHandler:
-        public: true
-        arguments:
-            $fixturesPath: '%kernel.project_dir%/tests/Fixtures/basil'
-            $uploadedPath: '%kernel.project_dir%/tests/Fixtures/Uploaded'
-
-    App\Tests\Services\SourceStoreInitializer:
         public: true
 
     App\Tests\Services\SourcesAddedEventSubscriber:
@@ -86,21 +77,14 @@ services:
     App\Tests\Services\CallbackHttpResponseEventSubscriber:
         public: true
 
-    GuzzleHttp\Handler\MockHandler: ~
+    GuzzleHttp\Handler\MockHandler:
+        class: GuzzleHttp\Handler\MockHandler
+        factory: [ '@App\Tests\Services\Guzzle\HandlerFactory', 'createQueuingMockHandler' ]
 
-    App\Tests\Services\GuzzleClientFactory: ~
-
-    Psr\Http\Client\ClientInterface:
-        class: GuzzleHttp\Client
-        factory: [ '@App\Tests\Services\GuzzleClientFactory', 'get' ]
-
-    App\Tests\Services\ClientRequestSender:
-        public: true
+    GuzzleHttp\HandlerStack:
+        factory: [ '@App\Tests\Services\Guzzle\HandlerStackFactory', 'create' ]
         arguments:
-            $client: '@test.client'
-
-    App\Tests\Services\UploadedFileFactory:
-        public: true
+            $handler: '@GuzzleHttp\Handler\MockHandler'
 
     App\Tests\Services\TestTestFactory:
         public: true

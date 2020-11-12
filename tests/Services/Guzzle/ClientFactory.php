@@ -2,20 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Services;
+namespace App\Tests\Services\Guzzle;
 
 use GuzzleHttp\Client as GuzzleHttpClient;
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 
-class GuzzleClientFactory
+class ClientFactory
 {
     private GuzzleHttpClient $guzzleHttpClient;
 
-    public function __construct(MockHandler $mockHandler)
+    public function __construct(HandlerStack $handlerStack)
     {
-        $handlerStack = HandlerStack::create($mockHandler);
-
         $this->guzzleHttpClient = new GuzzleHttpClient([
             'handler' => $handlerStack,
         ]);
