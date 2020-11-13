@@ -6,7 +6,6 @@ namespace App\Tests\Functional\Services;
 
 use App\Event\Callback\CallbackHttpExceptionEvent;
 use App\Event\Callback\CallbackHttpResponseEvent;
-use App\Model\Callback\CallbackInterface;
 use App\Services\CallbackResponseHandler;
 use App\Tests\AbstractBaseFunctionalTest;
 use App\Tests\Model\TestCallback;
@@ -15,7 +14,6 @@ use App\Tests\Services\CallbackHttpResponseEventSubscriber;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Response;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
-use Psr\Http\Message\ResponseInterface;
 use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
@@ -31,31 +29,6 @@ class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
     {
         parent::setUp();
         $this->injectContainerServicesIntoClassProperties();
-    }
-
-    /**
-     * @dataProvider handleResponseNoEventDispatchedDataProvider
-     */
-    public function testHandleResponseNoEventDispatched(CallbackInterface $callback, ResponseInterface $response)
-    {
-        $this->callbackResponseHandler->handleResponse($callback, $response);
-
-        self::assertNull($this->exceptionEventSubscriber->getEvent());
-        self::assertNull($this->responseEventSubscriber->getEvent());
-    }
-
-    public function handleResponseNoEventDispatchedDataProvider(): array
-    {
-        $dataSets = [];
-
-        for ($statusCode = 100; $statusCode < 300; $statusCode++) {
-            $dataSets[(string) $statusCode] = [
-                'callback' => new TestCallback(),
-                'response' => new Response($statusCode),
-            ];
-        }
-
-        return $dataSets;
     }
 
     public function testHandleResponseEventDispatched()
