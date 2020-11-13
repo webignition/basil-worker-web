@@ -17,9 +17,12 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemoryTransport;
 use Symfony\Contracts\EventDispatcher\Event;
+use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class CompilationWorkflowHandlerTest extends AbstractBaseFunctionalTest
 {
+    use TestClassServicePropertyInjectorTrait;
+
     private CompilationWorkflowHandler $handler;
     private JobStore $jobStore;
     private InMemoryTransport $messengerTransport;
@@ -29,34 +32,9 @@ class CompilationWorkflowHandlerTest extends AbstractBaseFunctionalTest
     protected function setUp(): void
     {
         parent::setUp();
+        $this->injectContainerServicesIntoClassProperties();
 
-        $handler = self::$container->get(CompilationWorkflowHandler::class);
-        if ($handler instanceof CompilationWorkflowHandler) {
-            $this->handler = $handler;
-        }
-
-        $jobStore = self::$container->get(JobStore::class);
-        if ($jobStore instanceof JobStore) {
-            $jobStore->create('label content', 'http://example.com/callback');
-            $this->jobStore = $jobStore;
-        }
-
-        $messengerTransport = self::$container->get('messenger.transport.async');
-        if ($messengerTransport instanceof InMemoryTransport) {
-            $this->messengerTransport = $messengerTransport;
-        }
-
-        $testFactory = self::$container->get(TestTestFactory::class);
-        self::assertInstanceOf(TestTestFactory::class, $testFactory);
-        if ($testFactory instanceof TestTestFactory) {
-            $this->testFactory = $testFactory;
-        }
-
-        $eventDispatcher = self::$container->get(EventDispatcherInterface::class);
-        self::assertInstanceOf(EventDispatcherInterface::class, $eventDispatcher);
-        if ($eventDispatcher instanceof EventDispatcherInterface) {
-            $this->eventDispatcher = $eventDispatcher;
-        }
+        $this->jobStore->create('label content', 'http://example.com/callback');
     }
 
     /**

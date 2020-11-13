@@ -11,27 +11,19 @@ use App\Tests\AbstractBaseFunctionalTest;
 use App\Tests\Services\ClientRequestSender;
 use App\Tests\Services\TestTestFactory;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class JobControllerTest extends AbstractBaseFunctionalTest
 {
+    use TestClassServicePropertyInjectorTrait;
+
     private JobStore $jobStore;
     private ClientRequestSender $clientRequestSender;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $jobStore = self::$container->get(JobStore::class);
-        self::assertInstanceOf(JobStore::class, $jobStore);
-        if ($jobStore instanceof JobStore) {
-            $this->jobStore = $jobStore;
-        }
-
-        $clientRequestSender = self::$container->get(ClientRequestSender::class);
-        self::assertInstanceOf(ClientRequestSender::class, $clientRequestSender);
-        if ($clientRequestSender instanceof ClientRequestSender) {
-            $this->clientRequestSender = $clientRequestSender;
-        }
+        $this->injectContainerServicesIntoClassProperties();
     }
 
     public function testCreate()

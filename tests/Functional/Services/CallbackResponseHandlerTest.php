@@ -16,10 +16,12 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Response;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Psr\Http\Message\ResponseInterface;
+use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
 {
     use MockeryPHPUnitIntegration;
+    use TestClassServicePropertyInjectorTrait;
 
     private CallbackResponseHandler $callbackResponseHandler;
     private CallbackHttpExceptionEventSubscriber $exceptionEventSubscriber;
@@ -28,21 +30,7 @@ class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
     protected function setUp(): void
     {
         parent::setUp();
-
-        $callbackResponseHandler = self::$container->get(CallbackResponseHandler::class);
-        if ($callbackResponseHandler instanceof CallbackResponseHandler) {
-            $this->callbackResponseHandler = $callbackResponseHandler;
-        }
-
-        $exceptionEventSubscriber = self::$container->get(CallbackHttpExceptionEventSubscriber::class);
-        if ($exceptionEventSubscriber instanceof CallbackHttpExceptionEventSubscriber) {
-            $this->exceptionEventSubscriber = $exceptionEventSubscriber;
-        }
-
-        $responseEventSubscriber = self::$container->get(CallbackHttpResponseEventSubscriber::class);
-        if ($responseEventSubscriber instanceof CallbackHttpResponseEventSubscriber) {
-            $this->responseEventSubscriber = $responseEventSubscriber;
-        }
+        $this->injectContainerServicesIntoClassProperties();
     }
 
     /**

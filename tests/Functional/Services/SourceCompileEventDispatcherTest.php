@@ -18,21 +18,24 @@ use webignition\BasilCompilerModels\ErrorOutputInterface;
 use webignition\BasilCompilerModels\OutputInterface;
 use webignition\BasilCompilerModels\SuiteManifest;
 use webignition\ObjectReflector\ObjectReflector;
+use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class SourceCompileEventDispatcherTest extends AbstractBaseFunctionalTest
 {
     use MockeryPHPUnitIntegration;
+    use TestClassServicePropertyInjectorTrait;
 
     private SourceCompileEventDispatcher $dispatcher;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->injectContainerServicesIntoClassProperties();
 
-        $dispatcher = self::$container->get(SourceCompileEventDispatcher::class);
-        if ($dispatcher instanceof SourceCompileEventDispatcher) {
-            $this->dispatcher = $dispatcher;
-        }
+//        $dispatcher = self::$container->get(SourceCompileEventDispatcher::class);
+//        if ($dispatcher instanceof SourceCompileEventDispatcher) {
+//            $this->dispatcher = $dispatcher;
+//        }
     }
 
     public function testDispatchEventNotDispatched()

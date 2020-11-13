@@ -19,21 +19,19 @@ use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use webignition\BasilCompilerModels\ErrorOutputInterface;
 use webignition\BasilCompilerModels\TestManifest;
 use webignition\ObjectReflector\ObjectReflector;
+use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class CompileSourceHandlerTest extends AbstractBaseFunctionalTest
 {
     use MockeryPHPUnitIntegration;
+    use TestClassServicePropertyInjectorTrait;
 
     private CompileSourceHandler $handler;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $handler = self::$container->get(CompileSourceHandler::class);
-        if ($handler instanceof CompileSourceHandler) {
-            $this->handler = $handler;
-        }
+        $this->injectContainerServicesIntoClassProperties();
 
         $jobStore = self::$container->get(JobStore::class);
         if ($jobStore instanceof JobStore) {

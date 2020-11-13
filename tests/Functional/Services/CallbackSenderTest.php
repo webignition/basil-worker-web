@@ -17,10 +17,12 @@ use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
 use webignition\ObjectReflector\ObjectReflector;
+use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class CallbackSenderTest extends AbstractBaseFunctionalTest
 {
     use MockeryPHPUnitIntegration;
+    use TestClassServicePropertyInjectorTrait;
 
     private CallbackSender $callbackSender;
     private MockHandler $mockHandler;
@@ -28,11 +30,7 @@ class CallbackSenderTest extends AbstractBaseFunctionalTest
     protected function setUp(): void
     {
         parent::setUp();
-
-        $callbackSender = self::$container->get(CallbackSender::class);
-        if ($callbackSender instanceof CallbackSender) {
-            $this->callbackSender = $callbackSender;
-        }
+        $this->injectContainerServicesIntoClassProperties();
 
         $mockHandler = self::$container->get('app.tests.services.guzzle.handler.queuing');
         if ($mockHandler instanceof MockHandler) {
