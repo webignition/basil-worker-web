@@ -35,6 +35,7 @@ class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
     {
         $response = new Response(404);
         $callback = new TestCallback();
+
         self::assertSame(0, $callback->getRetryCount());
 
         $this->callbackResponseHandler->handleResponse($callback, $response);

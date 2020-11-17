@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Event;
 
-use App\Model\Callback\CallbackInterface;
+use App\Entity\Callback\CallbackInterface;
 use Psr\EventDispatcher\StoppableEventInterface;
 
 interface CallbackEventInterface extends StoppableEventInterface

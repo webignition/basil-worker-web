@@ -13,6 +13,7 @@ use App\Tests\Mock\MockEventDispatcher;
 use App\Tests\Model\ExpectedDispatchedEvent;
 use App\Tests\Model\ExpectedDispatchedEventCollection;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\EventDispatcher\Event;
 use webignition\BasilCompilerModels\SuiteManifest;
 use webignition\ObjectReflector\ObjectReflector;
 use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
@@ -53,7 +54,15 @@ class TestExecutorTest extends AbstractBaseIntegrationTest
 
             foreach ($expectedDispatchedEventDocuments as $expectedDispatchedEventDocument) {
                 $expectedDispatchedEvents[] = new ExpectedDispatchedEvent(
-                    new TestExecuteDocumentReceivedEvent($test, $expectedDispatchedEventDocument)
+                    function (Event $actualEvent) use ($expectedDispatchedEventDocument): bool {
+                        self::assertInstanceOf(TestExecuteDocumentReceivedEvent::class, $actualEvent);
+
+                        if ($actualEvent instanceof TestExecuteDocumentReceivedEvent) {
+                            self::assertEquals($actualEvent->getDocument(), $expectedDispatchedEventDocument);
+                        }
+
+                        return true;
+                    }
                 );
             }
         }

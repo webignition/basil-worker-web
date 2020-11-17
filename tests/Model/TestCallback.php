@@ -4,23 +4,29 @@ declare(strict_types=1);
 
 namespace App\Tests\Model;
 
-use App\Model\Callback\AbstractCallback;
+use App\Entity\Callback\AbstractCallbackEntityWrapper;
+use App\Entity\Callback\CallbackEntity;
+use App\Entity\Callback\CallbackInterface;
 
-class TestCallback extends AbstractCallback
+class TestCallback extends AbstractCallbackEntityWrapper
 {
     private const ID = 'id';
-    private const TYPE = 'test';
 
     /**
      * @var array<mixed>
      */
-    private array $data = [];
+    private array $payload;
 
     public function __construct()
     {
-        $this->data = [
-            self::ID => random_bytes(16),
+        $this->payload = [
+            self::ID => md5(random_bytes(16)),
         ];
+
+        parent::__construct(CallbackEntity::create(
+            CallbackInterface::TYPE_COMPILE_FAILURE,
+            $this->payload
+        ));
     }
 
     public function withRetryCount(int $retryCount): self
@@ -34,25 +40,20 @@ class TestCallback extends AbstractCallback
     }
 
     /**
-     * @param array<mixed> $data
+     * @param CallbackInterface::STATE_* $state
      *
      * @return $this
      */
-    public function withData(array $data): self
+    public function withState(string $state): self
     {
         $new = clone $this;
-        $new->data = $data;
+        $new->setState($state);
 
         return $new;
     }
 
-    public function getType(): string
+    public function getPayload(): array
     {
-        return self::TYPE;
-    }
-
-    public function getData(): array
-    {
-        return $this->data;
+        return $this->payload;
     }
 }

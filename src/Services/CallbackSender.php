@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Entity\Callback\CallbackInterface;
 use App\HttpMessage\CallbackRequest;
-use App\Model\Callback\CallbackInterface;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface as HttpClientInterface;
 
@@ -14,17 +14,20 @@ class CallbackSender
     private HttpClientInterface $httpClient;
     private JobStore $jobStore;
     private CallbackResponseHandler $callbackResponseHandler;
+    private CallbackStateMutator $callbackStateMutator;
     private int $retryLimit;
 
     public function __construct(
         HttpClientInterface $httpClient,
         JobStore $jobStore,
         CallbackResponseHandler $callbackResponseHandler,
+        CallbackStateMutator $callbackStateMutator,
         int $retryLimit
     ) {
         $this->httpClient = $httpClient;
         $this->jobStore = $jobStore;
         $this->callbackResponseHandler = $callbackResponseHandler;
+        $this->callbackStateMutator = $callbackStateMutator;
         $this->retryLimit = $retryLimit;
     }
 
@@ -35,6 +38,8 @@ class CallbackSender
         }
 
         if ($callback->hasReachedRetryLimit($this->retryLimit)) {
+            $this->callbackStateMutator->setFailed($callback);
+
             return;
         }
 
@@ -47,6 +52,8 @@ class CallbackSender
 
             if ($statusCode >= 300) {
                 $this->callbackResponseHandler->handleResponse($callback, $response);
+            } else {
+                $this->callbackStateMutator->setComplete($callback);
             }
         } catch (ClientExceptionInterface $httpClientException) {
             $this->callbackResponseHandler->handleClientException($callback, $httpClientException);

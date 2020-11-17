@@ -68,6 +68,36 @@ services:
     App\Services\TestCanceller:
         public: true
 
+    App\Services\CallbackStore:
+        public: true
+
+    App\Services\CallbackStateMutator:
+        public: true
+
+    App\Repository\CallbackRepository:
+        public: true
+
+    App\Services\CallbackFactory:
+        public: true
+
+    App\Services\CallbackEventFactory:
+        public: true
+
+    App\Services\SourceCompileEventFactory:
+        public: true
+
+    App\Services\CallbackWorkflowFactory:
+        public: true
+
+    App\Services\CallbackWorkflowHandler:
+        public: true
+
+    App\Services\ApplicationWorkflowFactory:
+        public: true
+
+    App\Services\ApplicationWorkflowHandler:
+        public: true
+
     App\Tests\Services\SourcesAddedEventSubscriber:
         public: true
 
@@ -90,3 +120,6 @@ services:
 
     Symfony\Component\Messenger\Transport\InMemoryTransport:
         alias: 'messenger.transport.async'
+
+    App\Tests\Services\TestCallbackEventFactory:
+        public: true
