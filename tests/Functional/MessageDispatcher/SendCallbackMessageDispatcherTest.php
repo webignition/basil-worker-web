@@ -6,6 +6,7 @@ namespace App\Tests\Functional\MessageDispatcher;
 
 use App\Entity\Callback\CallbackInterface;
 use App\Entity\Callback\CompileFailureCallback;
+use App\Entity\Callback\DelayedCallback;
 use App\Entity\Callback\ExecuteDocumentReceivedCallback;
 use App\Event\Callback\CallbackHttpExceptionEvent;
 use App\Event\Callback\CallbackHttpResponseEvent;
@@ -14,15 +15,18 @@ use App\Event\SourceCompile\SourceCompileFailureEvent;
 use App\Event\TestExecuteDocumentReceivedEvent;
 use App\Message\SendCallback;
 use App\MessageDispatcher\SendCallbackMessageDispatcher;
+use App\Repository\CallbackRepository;
 use App\Tests\AbstractBaseFunctionalTest;
 use App\Tests\Mock\Entity\MockTest;
 use App\Tests\Model\Entity\Callback\TestCallbackEntity;
-use App\Tests\Services\TestCallbackEventFactory;
+use App\Tests\Model\TestCallback;
+use App\Tests\Services\Asserter\MessengerAsserter;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Response;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Messenger\Transport\InMemoryTransport;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
+use Symfony\Component\Messenger\Stamp\StampInterface;
 use webignition\BasilCompilerModels\ErrorOutputInterface;
 use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 use webignition\YamlDocument\Document;
@@ -33,9 +37,9 @@ class SendCallbackMessageDispatcherTest extends AbstractBaseFunctionalTest
     use TestClassServicePropertyInjectorTrait;
 
     private SendCallbackMessageDispatcher $messageDispatcher;
-    private InMemoryTransport $messengerTransport;
     private EventDispatcherInterface $eventDispatcher;
-    private TestCallbackEventFactory $testCallbackEventFactory;
+    private CallbackRepository $callbackRepository;
+    private MessengerAsserter $messengerAsserter;
 
     protected function setUp(): void
     {
@@ -43,15 +47,70 @@ class SendCallbackMessageDispatcherTest extends AbstractBaseFunctionalTest
         $this->injectContainerServicesIntoClassProperties();
     }
 
-    public function testDispatchForCallbackEvent()
-    {
-        $event = $this->testCallbackEventFactory->createEmptyPayloadSourceCompileFailureEvent();
-        $callback = $event->getCallback();
-        self::assertSame(CallbackInterface::STATE_AWAITING, $callback->getState());
+    /**
+     * @dataProvider dispatchForCallbackEventDataProvider
+     *
+     * @param CallbackInterface $callback
+     * @param string|null $expectedEnvelopeNotContainsStampsOfType
+     * @param array<string, array<int, StampInterface>> $expectedEnvelopeContainsStampCollections
+     */
+    public function testDispatchForCallbackEvent(
+        CallbackInterface $callback,
+        ?string $expectedEnvelopeNotContainsStampsOfType,
+        array $expectedEnvelopeContainsStampCollections
+    ) {
+        $event = \Mockery::mock(CallbackEventInterface::class);
+        $event
+            ->shouldReceive('getCallback')
+            ->andReturn($callback);
 
         $this->messageDispatcher->dispatchForCallbackEvent($event);
-        self::assertSame(CallbackInterface::STATE_QUEUED, $callback->getState());
-        $this->assertMessageTransportQueue($event->getCallback());
+
+        $callback = $this->callbackRepository->findOneBy([]);
+        self::assertInstanceOf(CallbackInterface::class, $callback);
+
+        $this->messengerAsserter->assertQueueCount(1);
+        $this->messengerAsserter->assertMessageAtPositionEquals(0, new SendCallback($callback));
+
+        $envelope = $this->messengerAsserter->getEnvelopeAtPosition(0);
+
+        if (is_string($expectedEnvelopeNotContainsStampsOfType)) {
+            $this->messengerAsserter->assertEnvelopeNotContainsStampsOfType(
+                $envelope,
+                $expectedEnvelopeNotContainsStampsOfType
+            );
+        }
+
+        $this->messengerAsserter->assertEnvelopeContainsStampCollections(
+            $envelope,
+            $expectedEnvelopeContainsStampCollections
+        );
+    }
+
+    public function dispatchForCallbackEventDataProvider(): array
+    {
+        $nonDelayedCallback = new TestCallback();
+        $delayedCallbackRetryCount1 = DelayedCallback::create(
+            (new TestCallback())
+                ->withRetryCount(1)
+        );
+
+        return [
+            'non-delayed' => [
+                'callback' => $nonDelayedCallback,
+                'expectedEnvelopeNotContainsStampsOfType' => DelayStamp::class,
+                'expectedEnvelopeContainsStampCollections' => [],
+            ],
+            'delayed, retry count 1' => [
+                'callback' => $delayedCallbackRetryCount1,
+                'expectedEnvelopeNotContainsStampsOfType' => null,
+                'expectedEnvelopeContainsStampCollections' => [
+                    DelayStamp::class => [
+                        new DelayStamp(1000),
+                    ],
+                ],
+            ],
+        ];
     }
 
     /**
@@ -63,11 +122,16 @@ class SendCallbackMessageDispatcherTest extends AbstractBaseFunctionalTest
     ) {
         $callback = $event->getCallback();
         self::assertSame(CallbackInterface::STATE_AWAITING, $callback->getState());
-        self::assertCount(0, $this->messengerTransport->get());
+        $this->messengerAsserter->assertQueueIsEmpty();
 
         $this->eventDispatcher->dispatch($event);
         self::assertSame(CallbackInterface::STATE_QUEUED, $callback->getState());
-        $this->assertMessageTransportQueue($expectedQueuedMessageCallback);
+
+        $this->messengerAsserter->assertQueueCount(1);
+        $this->messengerAsserter->assertMessageAtPositionEquals(
+            0,
+            new SendCallback($expectedQueuedMessageCallback)
+        );
     }
 
     public function subscribesToEventDataProvider(): array
@@ -93,11 +157,11 @@ class SendCallbackMessageDispatcherTest extends AbstractBaseFunctionalTest
                     $httpExceptionEventCallback,
                     \Mockery::mock(ConnectException::class)
                 ),
-                'expectedQueuedMessageCallback' => $httpExceptionEventCallback,
+                'expectedQueuedMessage' => $httpExceptionEventCallback,
             ],
             CallbackHttpResponseEvent::class => [
                 'event' => new CallbackHttpResponseEvent($httpResponseExceptionCallback, new Response(503)),
-                'expectedQueuedMessageCallback' => $httpResponseExceptionCallback,
+                'expectedQueuedMessage' => $httpResponseExceptionCallback,
             ],
             SourceCompileFailureEvent::class => [
                 'event' => new SourceCompileFailureEvent(
@@ -105,7 +169,7 @@ class SendCallbackMessageDispatcherTest extends AbstractBaseFunctionalTest
                     $sourceCompileFailureEventOutput,
                     $sourceCompileFailureEventCallback
                 ),
-                'expectedQueuedMessageCallback' => $sourceCompileFailureEventCallback,
+                'expectedQueuedMessage' => $sourceCompileFailureEventCallback,
             ],
             TestExecuteDocumentReceivedEvent::class => [
                 'event' => new TestExecuteDocumentReceivedEvent(
@@ -113,19 +177,8 @@ class SendCallbackMessageDispatcherTest extends AbstractBaseFunctionalTest
                     $document,
                     $testExecuteDocumentReceivedEventCallback
                 ),
-                'expectedQueuedMessageCallback' => $testExecuteDocumentReceivedEventCallback,
+                'expectedQueuedMessage' => $testExecuteDocumentReceivedEventCallback,
             ],
         ];
-    }
-
-    private function assertMessageTransportQueue(CallbackInterface $expectedCallback): void
-    {
-        $queue = $this->messengerTransport->get();
-        self::assertCount(1, $queue);
-        self::assertIsArray($queue);
-
-        $expectedQueuedMessage = new SendCallback($expectedCallback);
-
-        self::assertEquals($expectedQueuedMessage, $queue[0]->getMessage());
     }
 }
