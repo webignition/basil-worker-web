@@ -6,8 +6,7 @@ namespace App\Services;
 
 use App\Entity\Callback\CallbackInterface;
 use App\Entity\Callback\DelayedCallback;
-use App\Event\Callback\CallbackHttpExceptionEvent;
-use App\Event\Callback\CallbackHttpResponseEvent;
+use App\Event\CallbackHttpErrorEvent;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -21,28 +20,17 @@ class CallbackResponseHandler
         $this->eventDispatcher = $eventDispatcher;
     }
 
-    public function handleResponse(CallbackInterface $callback, ResponseInterface $response): void
+    /**
+     * @param CallbackInterface $callback
+     * @param ClientExceptionInterface|ResponseInterface $context
+     */
+    public function handle(CallbackInterface $callback, object $context): void
     {
         $callback->incrementRetryCount();
-        $callback = $this->createNextCallback($callback);
-
-        $this->eventDispatcher->dispatch(new CallbackHttpResponseEvent($callback, $response));
-    }
-
-    public function handleClientException(CallbackInterface $callback, ClientExceptionInterface $clientException): void
-    {
-        $callback->incrementRetryCount();
-        $callback = $this->createNextCallback($callback);
-
-        $this->eventDispatcher->dispatch(new CallbackHttpExceptionEvent($callback, $clientException));
-    }
-
-    private function createNextCallback(CallbackInterface $callback): CallbackInterface
-    {
-        if (0 === $callback->getRetryCount()) {
-            return $callback;
+        if (0 !== $callback->getRetryCount()) {
+            $callback = DelayedCallback::create($callback);
         }
 
-        return DelayedCallback::create($callback);
+        $this->eventDispatcher->dispatch(new CallbackHttpErrorEvent($callback, $context));
     }
 }

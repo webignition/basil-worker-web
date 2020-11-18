@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Services;
 
 use App\Entity\Callback\DelayedCallback;
-use App\Event\Callback\CallbackHttpExceptionEvent;
-use App\Event\Callback\CallbackHttpResponseEvent;
+use App\Event\CallbackHttpErrorEvent;
 use App\Services\CallbackResponseHandler;
 use App\Tests\AbstractBaseFunctionalTest;
 use App\Tests\Model\TestCallback;
-use App\Tests\Services\CallbackHttpExceptionEventSubscriber;
-use App\Tests\Services\CallbackHttpResponseEventSubscriber;
+use App\Tests\Services\CallbackHttpErrorEventSubscriber;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Response;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
+use Psr\Http\Client\ClientExceptionInterface;
+use Psr\Http\Message\ResponseInterface;
 use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
@@ -23,8 +23,7 @@ class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
     use TestClassServicePropertyInjectorTrait;
 
     private CallbackResponseHandler $callbackResponseHandler;
-    private CallbackHttpExceptionEventSubscriber $exceptionEventSubscriber;
-    private CallbackHttpResponseEventSubscriber $responseEventSubscriber;
+    private CallbackHttpErrorEventSubscriber $httpErrorEventSubscriber;
 
     protected function setUp(): void
     {
@@ -32,43 +31,37 @@ class CallbackResponseHandlerTest extends AbstractBaseFunctionalTest
         $this->injectContainerServicesIntoClassProperties();
     }
 
-    public function testHandleResponseEventDispatched()
+    /**
+     * @dataProvider handleDataProvider
+     *
+     * @param ClientExceptionInterface|ResponseInterface $context
+     */
+    public function testHandle(object $context)
     {
-        $response = new Response(404);
         $callback = new TestCallback();
         self::assertSame(0, $callback->getRetryCount());
 
-        $this->callbackResponseHandler->handleResponse($callback, $response);
+        $this->callbackResponseHandler->handle($callback, $context);
 
-        self::assertNull($this->exceptionEventSubscriber->getEvent());
-
-        $event = $this->responseEventSubscriber->getEvent();
-        self::assertInstanceOf(CallbackHttpResponseEvent::class, $event);
+        $event = $this->httpErrorEventSubscriber->getEvent();
+        self::assertInstanceOf(CallbackHttpErrorEvent::class, $event);
 
         $eventCallback = $event->getCallback();
         self::assertInstanceOf(DelayedCallback::class, $eventCallback);
         self::assertSame($eventCallback->getEntity(), $callback->getEntity());
-        self::assertSame($response, $event->getResponse());
+        self::assertSame($context, $event->getContext());
         self::assertSame(1, $callback->getRetryCount());
     }
 
-    public function testHandleExceptionEventDispatched()
+    public function handleDataProvider(): array
     {
-        $exception = \Mockery::mock(ConnectException::class);
-        $callback = new TestCallback();
-        self::assertSame(0, $callback->getRetryCount());
-
-        $this->callbackResponseHandler->handleClientException($callback, $exception);
-
-        self::assertNull($this->responseEventSubscriber->getEvent());
-
-        $event = $this->exceptionEventSubscriber->getEvent();
-        self::assertInstanceOf(CallbackHttpExceptionEvent::class, $event);
-
-        $eventCallback = $event->getCallback();
-        self::assertInstanceOf(DelayedCallback::class, $eventCallback);
-        self::assertSame($eventCallback->getEntity(), $callback->getEntity());
-        self::assertSame($exception, $event->getException());
-        self::assertSame(1, $callback->getRetryCount());
+        return [
+            'non-success response' => [
+                'context' => new Response(404),
+            ],
+            'exception' => [
+                'context' => \Mockery::mock(ConnectException::class),
+            ],
+        ];
     }
 }
