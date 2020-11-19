@@ -18,18 +18,18 @@ class ExecutionWorkflowHandler implements EventSubscriberInterface
     private MessageBusInterface $messageBus;
     private ExecutionWorkflowFactory $executionWorkflowFactory;
     private TestRepository $testRepository;
-    private CompilationWorkflowHandler $compilationWorkflowHandler;
+    private CompilationWorkflowFactory $compilationWorkflowFactory;
 
     public function __construct(
         MessageBusInterface $messageBus,
         ExecutionWorkflowFactory $executionWorkflowFactory,
         TestRepository $testRepository,
-        CompilationWorkflowHandler $compilationWorkflowHandler
+        CompilationWorkflowFactory $compilationWorkflowFactory
     ) {
         $this->messageBus = $messageBus;
         $this->executionWorkflowFactory = $executionWorkflowFactory;
         $this->testRepository = $testRepository;
-        $this->compilationWorkflowHandler = $compilationWorkflowHandler;
+        $this->compilationWorkflowFactory = $compilationWorkflowFactory;
     }
 
     public static function getSubscribedEvents()
@@ -55,11 +55,19 @@ class ExecutionWorkflowHandler implements EventSubscriberInterface
 
     public function dispatchNextExecuteTestMessage(): void
     {
-        if (false === $this->compilationWorkflowHandler->isComplete()) {
+        if (WorkflowInterface::STATE_COMPLETE !== $this->compilationWorkflowFactory->create()->getState()) {
             return;
         }
 
-        if (false === $this->isReadyToExecute()) {
+        $isReadyToExecute = in_array(
+            $this->executionWorkflowFactory->create()->getState(),
+            [
+                WorkflowInterface::STATE_NOT_STARTED,
+                WorkflowInterface::STATE_IN_PROGRESS,
+            ]
+        );
+
+        if (false === $isReadyToExecute) {
             return;
         }
 
@@ -73,25 +81,5 @@ class ExecutionWorkflowHandler implements EventSubscriberInterface
                 $this->messageBus->dispatch($message);
             }
         }
-    }
-
-    public function isComplete(): bool
-    {
-        $workflow = $this->executionWorkflowFactory->create();
-
-        return WorkflowInterface::STATE_COMPLETE === $workflow->getState();
-    }
-
-    public function isReadyToExecute(): bool
-    {
-        $workflow = $this->executionWorkflowFactory->create();
-
-        return in_array(
-            $workflow->getState(),
-            [
-                WorkflowInterface::STATE_NOT_STARTED,
-                WorkflowInterface::STATE_IN_PROGRESS,
-            ]
-        );
     }
 }

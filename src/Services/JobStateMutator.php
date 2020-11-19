@@ -11,22 +11,23 @@ use App\Event\SourceCompile\SourceCompileSuccessEvent;
 use App\Event\SourcesAddedEvent;
 use App\Event\TestExecuteCompleteEvent;
 use App\Event\TestFailedEvent;
+use App\Model\Workflow\WorkflowInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class JobStateMutator implements EventSubscriberInterface
 {
     private JobStore $jobStore;
-    private CompilationWorkflowHandler $compilationWorkflowHandler;
-    private ExecutionWorkflowHandler $executionWorkflowHandler;
+    private CompilationWorkflowFactory $compilationWorkflowFactory;
+    private ExecutionWorkflowFactory $executionWorkflowFactory;
 
     public function __construct(
         JobStore $jobStore,
-        CompilationWorkflowHandler $compilationWorkflowHandler,
-        ExecutionWorkflowHandler $executionWorkflowHandler
+        CompilationWorkflowFactory $compilationWorkflowFactory,
+        ExecutionWorkflowFactory $executionWorkflowFactory
     ) {
         $this->jobStore = $jobStore;
-        $this->compilationWorkflowHandler = $compilationWorkflowHandler;
-        $this->executionWorkflowHandler = $executionWorkflowHandler;
+        $this->compilationWorkflowFactory = $compilationWorkflowFactory;
+        $this->executionWorkflowFactory = $executionWorkflowFactory;
     }
 
     public static function getSubscribedEvents()
@@ -73,8 +74,15 @@ class JobStateMutator implements EventSubscriberInterface
     {
         $this->conditionallySetState(
             function (): bool {
-                return $this->compilationWorkflowHandler->isComplete()
-                    && $this->executionWorkflowHandler->isReadyToExecute();
+                return
+                    WorkflowInterface::STATE_COMPLETE === $this->compilationWorkflowFactory->create()->getState()
+                    && in_array(
+                        $this->executionWorkflowFactory->create()->getState(),
+                        [
+                            WorkflowInterface::STATE_NOT_STARTED,
+                            WorkflowInterface::STATE_IN_PROGRESS,
+                        ]
+                    );
             },
             Job::STATE_EXECUTION_AWAITING
         );
@@ -91,7 +99,8 @@ class JobStateMutator implements EventSubscriberInterface
     {
         $this->conditionallySetState(
             function (Job $job): bool {
-                return false === $job->isFinished() && $this->executionWorkflowHandler->isComplete();
+                return false === $job->isFinished()
+                    && WorkflowInterface::STATE_COMPLETE === $this->executionWorkflowFactory->create()->getState();
             },
             Job::STATE_EXECUTION_COMPLETE
         );
