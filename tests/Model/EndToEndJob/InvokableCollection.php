@@ -17,8 +17,16 @@ class InvokableCollection implements InvokableInterface
     public function __construct(array $items)
     {
         foreach ($items as $invokable) {
-            if ($invokable instanceof InvokableItemInterface) {
-                $this->items[] = $invokable;
+            if ($invokable instanceof InvokableCollection) {
+                foreach ($invokable->getItems() as $collectionItem) {
+                    if ($collectionItem instanceof InvokableItemInterface) {
+                        $this->items[] = $collectionItem;
+                    }
+                }
+            } else {
+                if ($invokable instanceof InvokableItemInterface) {
+                    $this->items[] = $invokable;
+                }
             }
         }
     }
@@ -32,6 +40,19 @@ class InvokableCollection implements InvokableInterface
         }
 
         return $return;
+    }
+
+    /**
+     * @return InvokableItemInterface[]
+     */
+    public function getItems(): array
+    {
+        return $this->items;
+    }
+
+    public function setItem(int $index, InvokableItemInterface $item): void
+    {
+        $this->items[$index] = $item;
     }
 
     public function getServiceReferences(): array
