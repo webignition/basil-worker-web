@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
-use App\Entity\Job;
 use App\Entity\Test;
 use App\Message\ExecuteTest;
 use App\MessageHandler\ExecuteTestHandler;
+use App\Model\JobState;
 use App\Repository\TestRepository;
-use App\Services\JobStateMutator;
+use App\Services\JobStateFactory;
 use App\Services\JobStore;
 use App\Services\TestStateMutator;
 use App\Tests\Mock\Entity\MockJob;
 use App\Tests\Mock\Entity\MockTest;
 use App\Tests\Mock\Repository\MockTestRepository;
-use App\Tests\Mock\Services\MockJobStateMutator;
+use App\Tests\Mock\Services\MockJobStateFactory;
 use App\Tests\Mock\Services\MockJobStore;
 use App\Tests\Mock\Services\MockTestExecutor;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -31,7 +31,7 @@ class ExecuteTestHandlerTest extends TestCase
      */
     public function testInvokeNoExecution(
         JobStore $jobStore,
-        JobStateMutator $jobStateMutator,
+        JobStateFactory $jobStateFactory,
         ExecuteTest $message,
         TestRepository $testRepository
     ) {
@@ -41,11 +41,11 @@ class ExecuteTestHandlerTest extends TestCase
 
         $handler = new ExecuteTestHandler(
             $jobStore,
-            $jobStateMutator,
             $testExecutor,
             \Mockery::mock(EventDispatcherInterface::class),
             \Mockery::mock(TestStateMutator::class),
-            $testRepository
+            $testRepository,
+            $jobStateFactory
         );
 
         $handler($message);
@@ -53,14 +53,6 @@ class ExecuteTestHandlerTest extends TestCase
 
     public function invokeNoExecutionDataProvider(): array
     {
-        $jobInWrongState = (new MockJob())
-            ->withGetStateCall(Job::STATE_COMPILATION_AWAITING)
-            ->getMock();
-
-        $jobInCorrectState = (new MockJob())
-            ->withGetStateCall(Job::STATE_EXECUTION_RUNNING)
-            ->getMock();
-
         $testInWrongState = (new MockTest())
             ->withGetStateCall(Test::STATE_FAILED)
             ->getMock();
@@ -70,7 +62,7 @@ class ExecuteTestHandlerTest extends TestCase
                 'jobStore' => (new MockJobStore())
                     ->withHasJobCall(false)
                     ->getMock(),
-                'jobStateMutator' => (new MockJobStateMutator())
+                'jobStateFactory' => (new MockJobStateFactory())
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())
@@ -80,9 +72,10 @@ class ExecuteTestHandlerTest extends TestCase
             'job in wrong state' => [
                 'jobStore' => (new MockJobStore())
                     ->withHasJobCall(true)
-                    ->withGetJobCall($jobInWrongState)
+                    ->withGetJobCall((new MockJob())->getMock())
                     ->getMock(),
-                'jobStateMutator' => (new MockJobStateMutator())
+                'jobStateFactory' => (new MockJobStateFactory())
+                    ->withCreateCall(new JobState(JobState::STATE_COMPILATION_AWAITING))
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())
@@ -92,9 +85,10 @@ class ExecuteTestHandlerTest extends TestCase
             'no test' => [
                 'jobStore' => (new MockJobStore())
                     ->withHasJobCall(true)
-                    ->withGetJobCall($jobInCorrectState)
+                    ->withGetJobCall((new MockJob())->getMock())
                     ->getMock(),
-                'jobStateMutator' => (new MockJobStateMutator())
+                'jobStateFactory' => (new MockJobStateFactory())
+                    ->withCreateCall(new JobState(JobState::STATE_EXECUTION_AWAITING))
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())
@@ -104,9 +98,10 @@ class ExecuteTestHandlerTest extends TestCase
             'test in wrong state' => [
                 'jobStore' => (new MockJobStore())
                     ->withHasJobCall(true)
-                    ->withGetJobCall($jobInCorrectState)
+                    ->withGetJobCall((new MockJob())->getMock())
                     ->getMock(),
-                'jobStateMutator' => (new MockJobStateMutator())
+                'jobStateFactory' => (new MockJobStateFactory())
+                    ->withCreateCall(new JobState(JobState::STATE_EXECUTION_RUNNING))
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())

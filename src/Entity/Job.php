@@ -11,27 +11,6 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Job implements \JsonSerializable
 {
-    public const STATE_COMPILATION_AWAITING = 'compilation-awaiting';
-    public const STATE_COMPILATION_RUNNING = 'compilation-running';
-    public const STATE_COMPILATION_FAILED = 'compilation-failed';
-    public const STATE_EXECUTION_AWAITING = 'execution-awaiting';
-    public const STATE_EXECUTION_RUNNING = 'execution-running';
-    public const STATE_EXECUTION_FAILED = 'execution-failed';
-    public const STATE_EXECUTION_COMPLETE = 'execution-complete';
-    public const STATE_EXECUTION_CANCELLED = 'execution-cancelled';
-
-    private const RUNNING_STATES = [
-        self::STATE_COMPILATION_RUNNING,
-        self::STATE_EXECUTION_RUNNING,
-    ];
-
-    private const FINISHED_STATES = [
-        self::STATE_COMPILATION_FAILED,
-        self::STATE_EXECUTION_FAILED,
-        self::STATE_EXECUTION_COMPLETE,
-        self::STATE_EXECUTION_CANCELLED,
-    ];
-
     public const ID = 1;
 
     /**
@@ -39,13 +18,6 @@ class Job implements \JsonSerializable
      * @ORM\Column(type="integer")
      */
     private int $id = self::ID;
-
-    /**
-     * @ORM\Column(type="string", length=255, nullable=false)
-     *
-     * @var Job::STATE_*
-     */
-    private string $state = self::STATE_COMPILATION_AWAITING;
 
     /**
      * @ORM\Column(type="string", length=32, nullable=false, unique=true)
@@ -79,14 +51,6 @@ class Job implements \JsonSerializable
         return $this->id;
     }
 
-    /**
-     * @return Job::STATE_*
-     */
-    public function getState(): string
-    {
-        return $this->state;
-    }
-
     public function getLabel(): ?string
     {
         return $this->label;
@@ -114,30 +78,11 @@ class Job implements \JsonSerializable
     }
 
     /**
-     * @param Job::STATE_* $state
-     */
-    public function setState(string $state): void
-    {
-        $this->state = $state;
-    }
-
-    public function isRunning(): bool
-    {
-        return in_array($this->state, self::RUNNING_STATES);
-    }
-
-    public function isFinished(): bool
-    {
-        return in_array($this->state, self::FINISHED_STATES);
-    }
-
-    /**
      * @return array<mixed>
      */
     public function jsonSerialize(): array
     {
         return [
-            'state' => $this->state,
             'label' => $this->label,
             'callback_url' => $this->callbackUrl,
             'sources' => $this->sources,

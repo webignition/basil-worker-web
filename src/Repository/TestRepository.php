@@ -62,13 +62,6 @@ class TestRepository extends ServiceEntityRepository
         return $test instanceof Test ? $test : null;
     }
 
-    public function getAwaitingCount(): int
-    {
-        return count($this->findBy([
-            'state' => Test::STATE_AWAITING,
-        ]));
-    }
-
     /**
      * @return Test[]
      */
@@ -77,5 +70,27 @@ class TestRepository extends ServiceEntityRepository
         return $this->findBy([
             'state' => Test::STATE_AWAITING,
         ]);
+    }
+
+    public function getFailedCount(): int
+    {
+        return $this->getCountByState(Test::STATE_FAILED);
+    }
+
+    public function getCancelledCount(): int
+    {
+        return $this->getCountByState(Test::STATE_CANCELLED);
+    }
+
+    /**
+     * @param Test::STATE_* $state
+     *
+     * @return int
+     */
+    private function getCountByState(string $state): int
+    {
+        return count($this->findBy([
+            'state' => $state,
+        ]));
     }
 }
