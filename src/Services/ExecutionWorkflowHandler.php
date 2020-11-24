@@ -8,7 +8,6 @@ use App\Entity\Test;
 use App\Event\SourceCompile\SourceCompileSuccessEvent;
 use App\Event\TestExecuteCompleteEvent;
 use App\Message\ExecuteTest;
-use App\Model\Workflow\WorkflowInterface;
 use App\Repository\TestRepository;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -16,20 +15,20 @@ use Symfony\Component\Messenger\MessageBusInterface;
 class ExecutionWorkflowHandler implements EventSubscriberInterface
 {
     private MessageBusInterface $messageBus;
-    private ExecutionWorkflowFactory $executionWorkflowFactory;
     private TestRepository $testRepository;
-    private CompilationWorkflowFactory $compilationWorkflowFactory;
+    private CompilationState $compilationState;
+    private ExecutionState $executionState;
 
     public function __construct(
         MessageBusInterface $messageBus,
-        ExecutionWorkflowFactory $executionWorkflowFactory,
         TestRepository $testRepository,
-        CompilationWorkflowFactory $compilationWorkflowFactory
+        CompilationState $compilationState,
+        ExecutionState $executionState
     ) {
         $this->messageBus = $messageBus;
-        $this->executionWorkflowFactory = $executionWorkflowFactory;
         $this->testRepository = $testRepository;
-        $this->compilationWorkflowFactory = $compilationWorkflowFactory;
+        $this->compilationState = $compilationState;
+        $this->executionState = $executionState;
     }
 
     public static function getSubscribedEvents()
@@ -55,19 +54,11 @@ class ExecutionWorkflowHandler implements EventSubscriberInterface
 
     public function dispatchNextExecuteTestMessage(): void
     {
-        if (WorkflowInterface::STATE_COMPLETE !== $this->compilationWorkflowFactory->create()->getState()) {
+        if (false === $this->compilationState->is(...CompilationState::FINISHED_STATES)) {
             return;
         }
 
-        $isReadyToExecute = in_array(
-            $this->executionWorkflowFactory->create()->getState(),
-            [
-                WorkflowInterface::STATE_NOT_STARTED,
-                WorkflowInterface::STATE_IN_PROGRESS,
-            ]
-        );
-
-        if (false === $isReadyToExecute) {
+        if ($this->executionState->is(...ExecutionState::FINISHED_STATES)) {
             return;
         }
 

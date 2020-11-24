@@ -7,9 +7,9 @@ namespace App\Tests\Integration;
 use App\Entity\Callback\CallbackEntity;
 use App\Entity\Job;
 use App\Entity\Test;
-use App\Model\JobState;
-use App\Model\Workflow\WorkflowInterface;
-use App\Services\ApplicationWorkflowFactory;
+use App\Services\ApplicationState;
+use App\Services\CompilationState;
+use App\Services\ExecutionState;
 use App\Services\JobStore;
 use App\Tests\Model\EndToEndJob\InvokableInterface;
 use App\Tests\Model\EndToEndJob\JobConfiguration;
@@ -17,7 +17,8 @@ use App\Tests\Services\BasilFixtureHandler;
 use App\Tests\Services\ClientRequestSender;
 use App\Tests\Services\EntityRefresher;
 use App\Tests\Services\Integration\HttpLogReader;
-use App\Tests\Services\InvokableFactory\JobStateGetterFactory;
+use App\Tests\Services\InvokableFactory\CompilationStateGetterFactory;
+use App\Tests\Services\InvokableFactory\ExecutionStateGetterFactory;
 use App\Tests\Services\InvokableHandler;
 use App\Tests\Services\SourceStoreInitializer;
 use App\Tests\Services\UploadedFileFactory;
@@ -39,8 +40,8 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
     protected BasilFixtureHandler $basilFixtureHandler;
     protected EntityRefresher $entityRefresher;
     protected HttpLogReader $httpLogReader;
-    protected ApplicationWorkflowFactory $applicationWorkflowFactory;
     protected InvokableHandler $invokableHandler;
+    protected ApplicationState $applicationState;
 
     protected function setUp(): void
     {
@@ -59,20 +60,22 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
     /**
      * @param JobConfiguration $jobConfiguration
      * @param string[] $expectedSourcePaths
-     * @param JobState::STATE_* $expectedJobEndState
+     * @param CompilationState::STATE_* $expectedCompilationEndState
+     * @param ExecutionState::STATE_* $expectedExecutionEndState
      * @param InvokableInterface $postAssertions
      */
     protected function doCreateJobAddSourcesTest(
         JobConfiguration $jobConfiguration,
         array $expectedSourcePaths,
-        string $expectedJobEndState,
+        string $expectedCompilationEndState,
+        string $expectedExecutionEndState,
         InvokableInterface $postAssertions
     ): void {
         $this->createJob($jobConfiguration->getLabel(), $jobConfiguration->getCallbackUrl());
 
         self::assertSame(
-            JobState::STATE_COMPILATION_AWAITING,
-            (string) $this->invokableHandler->invoke(JobStateGetterFactory::get())
+            CompilationState::STATE_AWAITING,
+            $this->invokableHandler->invoke(CompilationStateGetterFactory::get())
         );
 
         $timer = new Timer();
@@ -88,8 +91,13 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
         $duration = $timer->stop();
 
         self::assertSame(
-            $expectedJobEndState,
-            (string) $this->invokableHandler->invoke(JobStateGetterFactory::get())
+            $expectedCompilationEndState,
+            $this->invokableHandler->invoke(CompilationStateGetterFactory::get())
+        );
+
+        self::assertSame(
+            $expectedExecutionEndState,
+            $this->invokableHandler->invoke(ExecutionStateGetterFactory::get())
         );
 
         foreach ($postAssertions->getServiceReferences() as $serviceReference) {
@@ -147,7 +155,7 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
         $intervalInMicroseconds = 100000;
 
         while (
-            WorkflowInterface::STATE_COMPLETE !== $this->applicationWorkflowFactory->create()->getState() &&
+            false === $this->applicationState->is(ApplicationState::STATE_COMPLETE) &&
             false === $maxDurationReached
         ) {
             usleep($intervalInMicroseconds);

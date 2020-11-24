@@ -7,15 +7,14 @@ namespace App\Tests\Unit\MessageHandler;
 use App\Entity\Test;
 use App\Message\ExecuteTest;
 use App\MessageHandler\ExecuteTestHandler;
-use App\Model\JobState;
 use App\Repository\TestRepository;
-use App\Services\JobStateFactory;
+use App\Services\ExecutionState;
 use App\Services\JobStore;
 use App\Services\TestStateMutator;
 use App\Tests\Mock\Entity\MockJob;
 use App\Tests\Mock\Entity\MockTest;
 use App\Tests\Mock\Repository\MockTestRepository;
-use App\Tests\Mock\Services\MockJobStateFactory;
+use App\Tests\Mock\Services\MockExecutionState;
 use App\Tests\Mock\Services\MockJobStore;
 use App\Tests\Mock\Services\MockTestExecutor;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -31,7 +30,7 @@ class ExecuteTestHandlerTest extends TestCase
      */
     public function testInvokeNoExecution(
         JobStore $jobStore,
-        JobStateFactory $jobStateFactory,
+        ExecutionState $executionState,
         ExecuteTest $message,
         TestRepository $testRepository
     ) {
@@ -45,7 +44,7 @@ class ExecuteTestHandlerTest extends TestCase
             \Mockery::mock(EventDispatcherInterface::class),
             \Mockery::mock(TestStateMutator::class),
             $testRepository,
-            $jobStateFactory
+            $executionState
         );
 
         $handler($message);
@@ -62,20 +61,20 @@ class ExecuteTestHandlerTest extends TestCase
                 'jobStore' => (new MockJobStore())
                     ->withHasJobCall(false)
                     ->getMock(),
-                'jobStateFactory' => (new MockJobStateFactory())
+                'executionState' => (new MockExecutionState())
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())
                     ->withoutFindCall()
                     ->getMock(),
             ],
-            'job in wrong state' => [
+            'execution state not awaiting, not running' => [
                 'jobStore' => (new MockJobStore())
                     ->withHasJobCall(true)
                     ->withGetJobCall((new MockJob())->getMock())
                     ->getMock(),
-                'jobStateFactory' => (new MockJobStateFactory())
-                    ->withCreateCall(new JobState(JobState::STATE_COMPILATION_AWAITING))
+                'executionState' => (new MockExecutionState())
+                    ->withIsCall(ExecutionState::FINISHED_STATES, true)
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())
@@ -87,8 +86,8 @@ class ExecuteTestHandlerTest extends TestCase
                     ->withHasJobCall(true)
                     ->withGetJobCall((new MockJob())->getMock())
                     ->getMock(),
-                'jobStateFactory' => (new MockJobStateFactory())
-                    ->withCreateCall(new JobState(JobState::STATE_EXECUTION_AWAITING))
+                'executionState' => (new MockExecutionState())
+                    ->withIsCall(ExecutionState::FINISHED_STATES, false)
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())
@@ -100,8 +99,8 @@ class ExecuteTestHandlerTest extends TestCase
                     ->withHasJobCall(true)
                     ->withGetJobCall((new MockJob())->getMock())
                     ->getMock(),
-                'jobStateFactory' => (new MockJobStateFactory())
-                    ->withCreateCall(new JobState(JobState::STATE_EXECUTION_RUNNING))
+                'executionState' => (new MockExecutionState())
+                    ->withIsCall(ExecutionState::FINISHED_STATES, false)
                     ->getMock(),
                 'message' => new ExecuteTest(1),
                 'testRepository' => (new MockTestRepository())

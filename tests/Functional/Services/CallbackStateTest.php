@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Services;
 
 use App\Entity\Callback\CallbackInterface;
-use App\Model\Workflow\CallbackWorkflow;
-use App\Services\CallbackWorkflowFactory;
+use App\Services\CallbackState;
 use App\Tests\AbstractBaseFunctionalTest;
 use App\Tests\Model\EndToEndJob\InvokableCollection;
 use App\Tests\Services\InvokableFactory\CallbackSetup;
@@ -14,11 +13,11 @@ use App\Tests\Services\InvokableFactory\CallbackSetupInvokableFactory;
 use App\Tests\Services\InvokableHandler;
 use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
-class CallbackWorkflowFactoryTest extends AbstractBaseFunctionalTest
+class CallbackStateTest extends AbstractBaseFunctionalTest
 {
     use TestClassServicePropertyInjectorTrait;
 
-    private CallbackWorkflowFactory $callbackWorkflowFactory;
+    private CallbackState $callbackStateFactory;
     private InvokableHandler $invokableHandler;
 
     protected function setUp(): void
@@ -28,12 +27,13 @@ class CallbackWorkflowFactoryTest extends AbstractBaseFunctionalTest
     }
 
     /**
-     * @dataProvider createDataProvider
+     * @dataProvider isDataProvider
      *
      * @param array<CallbackInterface::STATE_*> $callbackStates
-     * @param CallbackWorkflow $expectedWorkflow
+     * @param array<CallbackState::STATE_*> $expectedIsStates
+     * @param array<CallbackState::STATE_*> $expectedIsNotStates
      */
-    public function testCreate(array $callbackStates, CallbackWorkflow $expectedWorkflow)
+    public function testIs(array $callbackStates, array $expectedIsStates, array $expectedIsNotStates)
     {
         $callbackCreationInvocations = [];
         foreach ($callbackStates as $callbackState) {
@@ -44,54 +44,82 @@ class CallbackWorkflowFactoryTest extends AbstractBaseFunctionalTest
 
         $this->invokableHandler->invoke(new InvokableCollection($callbackCreationInvocations));
 
-        self::assertEquals($expectedWorkflow, $this->callbackWorkflowFactory->create());
+        self::assertTrue($this->callbackStateFactory->is(...$expectedIsStates));
+        self::assertFalse($this->callbackStateFactory->is(...$expectedIsNotStates));
     }
 
-    public function createDataProvider(): array
+    public function isDataProvider(): array
     {
         return [
             'no callbacks' => [
                 'callbackStates' => [],
-                'expectedWorkflow' => new CallbackWorkflow(0, 0),
+                'expectedIsStates' => [
+                    CallbackState::STATE_AWAITING,
+                ],
+                'expectedIsNotStates' => [
+                    CallbackState::STATE_RUNNING,
+                    CallbackState::STATE_COMPLETE,
+                ],
             ],
-            'three total, none finished' => [
+            'awaiting, sending, queued' => [
                 'callbackStates' => [
                     CallbackInterface::STATE_AWAITING,
                     CallbackInterface::STATE_QUEUED,
                     CallbackInterface::STATE_SENDING,
                 ],
-                'expectedWorkflow' => new CallbackWorkflow(3, 0),
-            ],
-            'four total, one complete' => [
-                'callbackStates' => [
-                    CallbackInterface::STATE_AWAITING,
-                    CallbackInterface::STATE_QUEUED,
-                    CallbackInterface::STATE_SENDING,
-                    CallbackInterface::STATE_COMPLETE,
+                'expectedIsStates' => [
+                    CallbackState::STATE_RUNNING,
                 ],
-                'expectedWorkflow' => new CallbackWorkflow(4, 1),
-            ],
-            'four total, one failed' => [
-                'callbackStates' => [
-                    CallbackInterface::STATE_AWAITING,
-                    CallbackInterface::STATE_QUEUED,
-                    CallbackInterface::STATE_SENDING,
-                    CallbackInterface::STATE_FAILED,
+                'expectedIsNotStates' => [
+                    CallbackState::STATE_AWAITING,
+                    CallbackState::STATE_COMPLETE,
                 ],
-                'expectedWorkflow' => new CallbackWorkflow(4, 1),
             ],
-            'eight total, two complete, three failed' => [
+            'awaiting, sending, queued, complete' => [
                 'callbackStates' => [
                     CallbackInterface::STATE_AWAITING,
                     CallbackInterface::STATE_QUEUED,
                     CallbackInterface::STATE_SENDING,
                     CallbackInterface::STATE_COMPLETE,
+                ],
+                'expectedIsStates' => [
+                    CallbackState::STATE_RUNNING,
+                ],
+                'expectedIsNotStates' => [
+                    CallbackState::STATE_AWAITING,
+                    CallbackState::STATE_COMPLETE,
+                ],
+            ],
+            'awaiting, sending, queued, failed' => [
+                'callbackStates' => [
+                    CallbackInterface::STATE_AWAITING,
+                    CallbackInterface::STATE_QUEUED,
+                    CallbackInterface::STATE_SENDING,
+                    CallbackInterface::STATE_FAILED,
+                ],
+                'expectedIsStates' => [
+                    CallbackState::STATE_RUNNING,
+                ],
+                'expectedIsNotStates' => [
+                    CallbackState::STATE_AWAITING,
+                    CallbackState::STATE_COMPLETE,
+                ],
+            ],
+            'two complete, three failed' => [
+                'callbackStates' => [
+                    CallbackInterface::STATE_COMPLETE,
                     CallbackInterface::STATE_COMPLETE,
                     CallbackInterface::STATE_FAILED,
                     CallbackInterface::STATE_FAILED,
                     CallbackInterface::STATE_FAILED,
                 ],
-                'expectedWorkflow' => new CallbackWorkflow(8, 5),
+                'expectedIsStates' => [
+                    CallbackState::STATE_COMPLETE,
+                ],
+                'expectedIsNotStates' => [
+                    CallbackState::STATE_AWAITING,
+                    CallbackState::STATE_RUNNING,
+                ],
             ],
         ];
     }

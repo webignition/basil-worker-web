@@ -7,9 +7,8 @@ namespace App\MessageHandler;
 use App\Entity\Test;
 use App\Event\TestExecuteCompleteEvent;
 use App\Message\ExecuteTest;
-use App\Model\JobState;
 use App\Repository\TestRepository;
-use App\Services\JobStateFactory;
+use App\Services\ExecutionState;
 use App\Services\JobStore;
 use App\Services\TestExecutor;
 use App\Services\TestStateMutator;
@@ -23,7 +22,7 @@ class ExecuteTestHandler implements MessageHandlerInterface
     private EventDispatcherInterface $eventDispatcher;
     private TestStateMutator $testStateMutator;
     private TestRepository $testRepository;
-    private JobStateFactory $jobStateFactory;
+    private ExecutionState $executionState;
 
     public function __construct(
         JobStore $jobStore,
@@ -31,14 +30,14 @@ class ExecuteTestHandler implements MessageHandlerInterface
         EventDispatcherInterface $eventDispatcher,
         TestStateMutator $testStateMutator,
         TestRepository $testRepository,
-        JobStateFactory $jobStateFactory
+        ExecutionState $executionState
     ) {
         $this->jobStore = $jobStore;
         $this->testExecutor = $testExecutor;
         $this->eventDispatcher = $eventDispatcher;
         $this->testStateMutator = $testStateMutator;
         $this->testRepository = $testRepository;
-        $this->jobStateFactory = $jobStateFactory;
+        $this->executionState = $executionState;
     }
 
     public function __invoke(ExecuteTest $message): void
@@ -47,8 +46,7 @@ class ExecuteTestHandler implements MessageHandlerInterface
             return;
         }
 
-        $jobState = $this->jobStateFactory->create();
-        if (!in_array((string) $jobState, [JobState::STATE_EXECUTION_AWAITING, JobState::STATE_EXECUTION_RUNNING])) {
+        if ($this->executionState->is(...ExecutionState::FINISHED_STATES)) {
             return;
         }
 
