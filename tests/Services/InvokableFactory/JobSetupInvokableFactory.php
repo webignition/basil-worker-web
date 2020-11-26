@@ -19,7 +19,11 @@ class JobSetupInvokableFactory
 
         $collection = [];
 
-        $collection[] = self::create($jobSetup->getLabel(), $jobSetup->getCallbackUrl());
+        $collection[] = self::create(
+            $jobSetup->getLabel(),
+            $jobSetup->getCallbackUrl(),
+            $jobSetup->getMaximumDurationInSeconds()
+        );
 
         $sources = $jobSetup->getSources();
         if (is_array($sources)) {
@@ -29,16 +33,20 @@ class JobSetupInvokableFactory
         return new InvokableCollection($collection);
     }
 
-    private static function create(string $label, string $callbackUrl): InvokableInterface
-    {
+    private static function create(
+        string $label,
+        string $callbackUrl,
+        int $maximumDurationInSeconds
+    ): InvokableInterface {
         return new Invokable(
-            function (JobStore $jobStore, string $label, string $callbackUrl): Job {
-                return $jobStore->create($label, $callbackUrl);
+            function (JobStore $jobStore, string $label, string $callbackUrl, int $maximumDurationInSeconds): Job {
+                return $jobStore->create($label, $callbackUrl, $maximumDurationInSeconds);
             },
             [
                 new ServiceReference(JobStore::class),
                 $label,
                 $callbackUrl,
+                $maximumDurationInSeconds,
             ]
         );
     }

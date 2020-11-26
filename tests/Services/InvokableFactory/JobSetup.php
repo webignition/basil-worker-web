@@ -8,6 +8,8 @@ class JobSetup
 {
     private string $label;
     private string $callbackUrl;
+    private int $maximumDurationInSeconds;
+    private string $manifestPath;
 
     /**
      * @var string[]
@@ -18,6 +20,8 @@ class JobSetup
     {
         $this->label = md5('label content');
         $this->callbackUrl = 'http://example.com/callback';
+        $this->maximumDurationInSeconds = 600;
+        $this->manifestPath = '';
         $this->sources = null;
     }
 
@@ -29,6 +33,16 @@ class JobSetup
     public function getCallbackUrl(): string
     {
         return $this->callbackUrl;
+    }
+
+    public function getMaximumDurationInSeconds(): int
+    {
+        return $this->maximumDurationInSeconds;
+    }
+
+    public function getManifestPath(): string
+    {
+        return $this->manifestPath;
     }
 
     /**
@@ -64,6 +78,22 @@ class JobSetup
     {
         $new = clone $this;
         $new->sources = $sources;
+
+        return $new;
+    }
+
+    public function withManifestPath(string $manifestPath): self
+    {
+        $new = clone $this;
+        $new->manifestPath = $manifestPath;
+
+        return $new;
+    }
+
+    public function withMaximumDurationInSeconds(int $maximumDurationInSeconds): self
+    {
+        $new = clone $this;
+        $new->maximumDurationInSeconds = $maximumDurationInSeconds;
 
         return $new;
     }

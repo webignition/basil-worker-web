@@ -4,24 +4,27 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Asynchronous\EndToEnd;
 
+use App\Entity\Callback\CallbackInterface;
 use App\Entity\Test;
 use App\Model\BackoffStrategy\ExponentialBackoffStrategy;
 use App\Repository\TestRepository;
+use App\Services\ApplicationState;
 use App\Services\CompilationState;
 use App\Services\ExecutionState;
 use App\Tests\Integration\AbstractEndToEndTest;
 use App\Tests\Model\EndToEndJob\Invokable;
 use App\Tests\Model\EndToEndJob\InvokableCollection;
-use App\Tests\Model\EndToEndJob\JobConfiguration;
+use App\Tests\Model\EndToEndJob\InvokableInterface;
 use App\Tests\Model\EndToEndJob\ServiceReference;
 use App\Tests\Services\Integration\HttpLogReader;
+use App\Tests\Services\InvokableFactory\JobSetup;
+use App\Tests\Services\InvokableFactory\TestGetterFactory;
+use Psr\Http\Message\RequestInterface;
 use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
 class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
 {
     use TestClassServicePropertyInjectorTrait;
-
-    private TestRepository $testRepository;
 
     protected function setUp(): void
     {
@@ -32,44 +35,27 @@ class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
     /**
      * @dataProvider createAddSourcesCompileExecuteDataProvider
      *
-     * @param JobConfiguration $jobConfiguration
+     * @param JobSetup $jobSetup
      * @param string[] $expectedSourcePaths
      * @param CompilationState::STATE_* $expectedCompilationEndState
      * @param ExecutionState::STATE_* $expectedExecutionEndState
-     * @param array<Test::STATE_*> $expectedTestEndStates
+     * @param ApplicationState::STATE_* $expectedApplicationEndState
      */
     public function testCreateAddSourcesCompileExecute(
-        JobConfiguration $jobConfiguration,
+        JobSetup $jobSetup,
         array $expectedSourcePaths,
         string $expectedCompilationEndState,
         string $expectedExecutionEndState,
-        array $expectedTestEndStates,
-        Invokable $assertions
+        string $expectedApplicationEndState,
+        InvokableInterface $assertions
     ) {
-        $expectedTestEndStatesAssertions = new Invokable(
-            function (array $expectedTestEndStates) {
-                $tests = $this->testRepository->findAll();
-                self::assertCount(count($expectedTestEndStates), $tests);
-
-                foreach ($tests as $testIndex => $test) {
-                    $expectedTestEndState = $expectedTestEndStates[$testIndex] ?? null;
-                    self::assertSame($expectedTestEndState, $test->getState());
-                }
-            },
-            [
-                $expectedTestEndStates,
-            ]
-        );
-
         $this->doCreateJobAddSourcesTest(
-            $jobConfiguration,
+            $jobSetup,
             $expectedSourcePaths,
             $expectedCompilationEndState,
             $expectedExecutionEndState,
-            new InvokableCollection([
-                $expectedTestEndStatesAssertions,
-                $assertions
-            ])
+            $expectedApplicationEndState,
+            $assertions
         );
     }
 
@@ -77,11 +63,9 @@ class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
     {
         return [
             'default' => [
-                'jobConfiguration' => new JobConfiguration(
-                    md5('label content'),
-                    'http://200.example.com/callback/1',
-                    getcwd() . '/tests/Fixtures/Manifest/manifest.txt'
-                ),
+                'jobSetup' => (new JobSetup())
+                    ->withCallbackUrl('http://200.example.com/callback/1')
+                    ->withManifestPath(getcwd() . '/tests/Fixtures/Manifest/manifest.txt'),
                 'expectedSourcePaths' => [
                     'Test/chrome-open-index.yml',
                     'Test/chrome-firefox-open-index.yml',
@@ -89,60 +73,115 @@ class CreateAddSourcesCompileExecuteTest extends AbstractEndToEndTest
                 ],
                 'expectedCompilationEndState' => CompilationState::STATE_COMPLETE,
                 'expectedExecutionEndState' => ExecutionState::STATE_COMPLETE,
-                'expectedTestEndStates' => [
+                'expectedApplicationEndState' => ApplicationState::STATE_COMPLETE,
+                'assertions' => TestGetterFactory::assertStates([
                     Test::STATE_COMPLETE,
                     Test::STATE_COMPLETE,
                     Test::STATE_COMPLETE,
                     Test::STATE_COMPLETE,
-                ],
-                'assertions' => Invokable::createEmpty(),
+                ]),
             ],
             'verify retried transactions are delayed' => [
-                'jobConfiguration' => new JobConfiguration(
-                    md5('label content'),
-                    'http://200.500.500.200.example.com/callback/2',
-                    getcwd() . '/tests/Fixtures/Manifest/manifest-chrome-open-index.txt'
-                ),
+                'jobSetup' => (new JobSetup())
+                    ->withCallbackUrl('http://200.500.500.200.example.com/callback/2')
+                    ->withManifestPath(getcwd() . '/tests/Fixtures/Manifest/manifest-chrome-open-index.txt'),
                 'expectedSourcePaths' => [
                     'Test/chrome-open-index.yml',
                 ],
                 'expectedCompilationEndState' => CompilationState::STATE_COMPLETE,
                 'expectedExecutionEndState' => ExecutionState::STATE_COMPLETE,
-                'expectedTestEndStates' => [
-                    Test::STATE_COMPLETE,
+                'expectedApplicationEndState' => ApplicationState::STATE_COMPLETE,
+                'assertions' => new InvokableCollection([
+                    'verify test end states' => TestGetterFactory::assertStates([
+                        Test::STATE_COMPLETE,
+                    ]),
+                    'verify http transactions' => new Invokable(
+                        function (HttpLogReader $httpLogReader) {
+                            $httpTransactions = $httpLogReader->getTransactions();
+                            $httpLogReader->reset();
+
+                            self::assertCount(4, $httpTransactions);
+
+                            $transactionPeriods = $httpTransactions->getPeriods()->getPeriodsInMicroseconds();
+                            array_shift($transactionPeriods);
+
+                            self::assertCount(3, $transactionPeriods);
+
+                            $firstStepTransactionPeriod = array_shift($transactionPeriods);
+                            $retriedTransactionPeriods = [];
+                            foreach ($transactionPeriods as $transactionPeriod) {
+                                $retriedTransactionPeriods[] = $transactionPeriod - $firstStepTransactionPeriod;
+                            }
+
+                            $backoffStrategy = new ExponentialBackoffStrategy();
+                            foreach ($retriedTransactionPeriods as $retryIndex => $retriedTransactionPeriod) {
+                                $retryCount = $retryIndex + 1;
+                                $expectedLowerThreshold = $backoffStrategy->getDelay($retryCount) * 1000;
+                                $expectedUpperThreshold = $backoffStrategy->getDelay($retryCount + 1) * 1000;
+
+                                self::assertGreaterThanOrEqual($expectedLowerThreshold, $retriedTransactionPeriod);
+                                self::assertLessThan($expectedUpperThreshold, $retriedTransactionPeriod);
+                            }
+                        },
+                        [
+                            new ServiceReference(HttpLogReader::class),
+                        ]
+                    )
+                ]),
+            ],
+            'verify job is timed out' => [
+                'jobSetup' => (new JobSetup())
+                    ->withCallbackUrl('http://200.example.com/callback/1')
+                    ->withManifestPath(getcwd() . '/tests/Fixtures/Manifest/manifest.txt')
+                    ->withMaximumDurationInSeconds(1),
+                'expectedSourcePaths' => [
+                    'Test/chrome-open-index.yml',
+                    'Test/chrome-firefox-open-index.yml',
+                    'Test/chrome-open-form.yml',
                 ],
-                'assertions' => new Invokable(
-                    function (HttpLogReader $httpLogReader) {
-                        $httpTransactions = $httpLogReader->getTransactions();
-                        $httpLogReader->reset();
+                'expectedCompilationEndState' => CompilationState::STATE_COMPLETE,
+                'expectedExecutionEndState' => ExecutionState::STATE_CANCELLED,
+                'expectedApplicationEndState' => ApplicationState::STATE_TIMED_OUT,
+                'assertions' => new InvokableCollection([
+                    'verify job and test end states' => new Invokable(
+                        function (TestRepository $testRepository) {
+                            $tests = $testRepository->findAll();
+                            $hasFoundCancelledTest = false;
 
-                        self::assertCount(4, $httpTransactions);
+                            foreach ($tests as $test) {
+                                if (Test::STATE_CANCELLED === $test->getState() && false === $hasFoundCancelledTest) {
+                                    $hasFoundCancelledTest = true;
+                                }
 
-                        $transactionPeriods = $httpTransactions->getPeriods()->getPeriodsInMicroseconds();
-                        array_shift($transactionPeriods);
+                                if ($hasFoundCancelledTest) {
+                                    self::assertSame(Test::STATE_CANCELLED, $test->getState());
+                                } else {
+                                    self::assertSame(Test::STATE_COMPLETE, $test->getState());
+                                }
+                            }
+                        },
+                        [
+                            new ServiceReference(TestRepository::class),
+                        ]
+                    ),
+                    'verify last http request type' => new Invokable(
+                        function (HttpLogReader $httpLogReader) {
+                            $httpTransactions = $httpLogReader->getTransactions();
+                            $httpLogReader->reset();
 
-                        self::assertCount(3, $transactionPeriods);
+                            $lastRequestPayload = [];
+                            $lastRequest = $httpTransactions->getRequests()->getLast();
+                            if ($lastRequest instanceof RequestInterface) {
+                                $lastRequestPayload = json_decode($lastRequest->getBody()->getContents(), true);
+                            }
 
-                        $firstStepTransactionPeriod = array_shift($transactionPeriods);
-                        $retriedTransactionPeriods = [];
-                        foreach ($transactionPeriods as $transactionPeriod) {
-                            $retriedTransactionPeriods[] = $transactionPeriod - $firstStepTransactionPeriod;
-                        }
-
-                        $backoffStrategy = new ExponentialBackoffStrategy();
-                        foreach ($retriedTransactionPeriods as $retryIndex => $retriedTransactionPeriod) {
-                            $retryCount = $retryIndex + 1;
-                            $expectedLowerThreshold = $backoffStrategy->getDelay($retryCount) * 1000;
-                            $expectedUpperThreshold = $backoffStrategy->getDelay($retryCount + 1) * 1000;
-
-                            self::assertGreaterThanOrEqual($expectedLowerThreshold, $retriedTransactionPeriod);
-                            self::assertLessThan($expectedUpperThreshold, $retriedTransactionPeriod);
-                        }
-                    },
-                    [
-                        new ServiceReference(HttpLogReader::class),
-                    ]
-                ),
+                            self::assertSame(CallbackInterface::TYPE_JOB_TIMEOUT, $lastRequestPayload['type']);
+                        },
+                        [
+                            new ServiceReference(HttpLogReader::class),
+                        ]
+                    )
+                ]),
             ],
         ];
     }
