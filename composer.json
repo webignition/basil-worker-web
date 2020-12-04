@@ -86,6 +86,10 @@
         "post-update-cmd": [
             "@auto-scripts"
         ],
+        "db-setup": [
+            "php bin/console doctrine:database:create --if-not-exists --quiet",
+            "php bin/console doctrine:migrations:migrate --no-interaction --quiet"
+        ],
         "cs-ecs": "./vendor/bin/ecs check src tests --ansi --no-progress-bar --config ecs.php",
         "cs-phpcs": "./vendor/bin/phpcs",
         "cs": [
@@ -105,9 +109,15 @@
             "@test-unit",
             "@test-functional"
         ],
-        "integration-setup": "docker-compose --env-file tests/.env -f tests/docker-compose.yml up -d",
-        "integration-status": "docker-compose --env-file tests/.env -f tests/docker-compose.yml ps",
-        "integration-teardown": "docker-compose --env-file tests/.env -f tests/docker-compose.yml down",
+        "integration-start": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml up -d",
+        "integration-status": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml ps",
+        "integration-stop": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml stop",
+        "integration-destroy": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml down",
+        "integration-setup": [
+            "@integration-start",
+            "sleep 2",
+            "@db-setup"
+        ],
         "ci": [
             "@cs",
             "@static-analysis",
