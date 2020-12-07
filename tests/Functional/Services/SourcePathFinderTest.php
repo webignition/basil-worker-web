@@ -4,23 +4,24 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Services;
 
-use App\Services\JobSourceFinder;
+use App\Services\SourcePathFinder;
 use App\Tests\AbstractBaseFunctionalTest;
 use App\Tests\Model\EndToEndJob\Invokable;
 use App\Tests\Model\EndToEndJob\InvokableCollection;
 use App\Tests\Model\EndToEndJob\InvokableInterface;
-use App\Tests\Services\InvokableFactory\JobSetup;
 use App\Tests\Services\InvokableFactory\JobSetupInvokableFactory;
+use App\Tests\Services\InvokableFactory\SourceSetup;
+use App\Tests\Services\InvokableFactory\SourceSetupInvokableFactory;
 use App\Tests\Services\InvokableFactory\TestSetup;
 use App\Tests\Services\InvokableFactory\TestSetupInvokableFactory;
 use App\Tests\Services\InvokableHandler;
 use webignition\SymfonyTestServiceInjectorTrait\TestClassServicePropertyInjectorTrait;
 
-class JobSourceFinderTest extends AbstractBaseFunctionalTest
+class SourcePathFinderTest extends AbstractBaseFunctionalTest
 {
     use TestClassServicePropertyInjectorTrait;
 
-    private JobSourceFinder $jobSourceFinder;
+    private SourcePathFinder $sourcePathFinder;
     private InvokableHandler $invokableHandler;
 
     protected function setUp(): void
@@ -30,16 +31,16 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
     }
 
     /**
-     * @dataProvider findNextNonCompiledSourceDataProvider
+     * @dataProvider findNextNonCompiledPathDataProvider
      */
-    public function testFindNextNonCompiledSource(InvokableInterface $setup, ?string $expectedNextNonCompiledSource)
+    public function testFindNextNonCompiledPath(InvokableInterface $setup, ?string $expectedNextNonCompiledSource)
     {
         $this->invokableHandler->invoke($setup);
 
-        self::assertSame($expectedNextNonCompiledSource, $this->jobSourceFinder->findNextNonCompiledSource());
+        self::assertSame($expectedNextNonCompiledSource, $this->sourcePathFinder->findNextNonCompiledPath());
     }
 
-    public function findNextNonCompiledSourceDataProvider(): array
+    public function findNextNonCompiledPathDataProvider(): array
     {
         $sources = [
             'Test/testZebra.yml',
@@ -57,19 +58,31 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
                 'expectedNextNonCompiledSource' => null,
             ],
             'has job, has sources, no tests' => [
-                'setup' => JobSetupInvokableFactory::setup(
-                    (new JobSetup())
-                        ->withSources($sources)
-                ),
+                'setup' => new InvokableCollection([
+                    'create job' => JobSetupInvokableFactory::setup(),
+                    'add job sources' => SourceSetupInvokableFactory::setupCollection([
+                        (new SourceSetup())
+                            ->withPath($sources[0]),
+                        (new SourceSetup())
+                            ->withPath($sources[1]),
+                        (new SourceSetup())
+                            ->withPath($sources[2]),
+                    ]),
+                ]),
                 'expectedNextNonCompiledSource' => $sources[0],
             ],
             'test exists for first source' => [
                 'setup' => new InvokableCollection([
-                    JobSetupInvokableFactory::setup(
-                        (new JobSetup())
-                            ->withSources($sources)
-                    ),
-                    TestSetupInvokableFactory::setupCollection([
+                    'create job' => JobSetupInvokableFactory::setup(),
+                    'add job sources' => SourceSetupInvokableFactory::setupCollection([
+                        (new SourceSetup())
+                            ->withPath($sources[0]),
+                        (new SourceSetup())
+                            ->withPath($sources[1]),
+                        (new SourceSetup())
+                            ->withPath($sources[2]),
+                    ]),
+                    'create tests' => TestSetupInvokableFactory::setupCollection([
                         (new TestSetup())
                             ->withSource('/app/source/' . $sources[0]),
                     ]),
@@ -78,11 +91,16 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
             ],
             'test exists for first and second sources' => [
                 'setup' => new InvokableCollection([
-                    JobSetupInvokableFactory::setup(
-                        (new JobSetup())
-                            ->withSources($sources)
-                    ),
-                    TestSetupInvokableFactory::setupCollection([
+                    'create job' => JobSetupInvokableFactory::setup(),
+                    'add job sources' => SourceSetupInvokableFactory::setupCollection([
+                        (new SourceSetup())
+                            ->withPath($sources[0]),
+                        (new SourceSetup())
+                            ->withPath($sources[1]),
+                        (new SourceSetup())
+                            ->withPath($sources[2]),
+                    ]),
+                    'create tests' => TestSetupInvokableFactory::setupCollection([
                         (new TestSetup())
                             ->withSource('/app/source/' . $sources[0]),
                         (new TestSetup())
@@ -93,11 +111,16 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
             ],
             'tests exist for all sources' => [
                 'setup' => new InvokableCollection([
-                    JobSetupInvokableFactory::setup(
-                        (new JobSetup())
-                            ->withSources($sources)
-                    ),
-                    TestSetupInvokableFactory::setupCollection([
+                    'create job' => JobSetupInvokableFactory::setup(),
+                    'add job sources' => SourceSetupInvokableFactory::setupCollection([
+                        (new SourceSetup())
+                            ->withPath($sources[0]),
+                        (new SourceSetup())
+                            ->withPath($sources[1]),
+                        (new SourceSetup())
+                            ->withPath($sources[2]),
+                    ]),
+                    'create tests' => TestSetupInvokableFactory::setupCollection([
                         (new TestSetup())
                             ->withSource('/app/source/' . $sources[0]),
                         (new TestSetup())
@@ -112,19 +135,19 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
     }
 
     /**
-     * @dataProvider findCompiledSourcesDataProvider
+     * @dataProvider findCompiledPathsDataProvider
      *
      * @param InvokableInterface $setup
      * @param string[] $expectedCompiledSources
      */
-    public function testFindCompiledSources(InvokableInterface $setup, array $expectedCompiledSources)
+    public function testFindCompiledPaths(InvokableInterface $setup, array $expectedCompiledSources)
     {
         $this->invokableHandler->invoke($setup);
 
-        self::assertSame($expectedCompiledSources, $this->jobSourceFinder->findCompiledSources());
+        self::assertSame($expectedCompiledSources, $this->sourcePathFinder->findCompiledPaths());
     }
 
-    public function findCompiledSourcesDataProvider(): array
+    public function findCompiledPathsDataProvider(): array
     {
         $sources = [
             'Test/testZebra.yml',
@@ -142,18 +165,14 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
                 'expectedCompiledSources' => [],
             ],
             'has job, has sources, no tests' => [
-                'setup' => JobSetupInvokableFactory::setup(
-                    (new JobSetup())
-                        ->withSources($sources)
-                ),
+                'setup' => new InvokableCollection([
+                    JobSetupInvokableFactory::setup(),
+                ]),
                 'expectedCompiledSources' => [],
             ],
             'test exists for first source' => [
                 'setup' => new InvokableCollection([
-                    JobSetupInvokableFactory::setup(
-                        (new JobSetup())
-                            ->withSources($sources)
-                    ),
+                    JobSetupInvokableFactory::setup(),
                     TestSetupInvokableFactory::setupCollection([
                         (new TestSetup())
                             ->withSource('/app/source/' . $sources[0]),
@@ -165,10 +184,7 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
             ],
             'test exists for first and second sources' => [
                 'setup' => new InvokableCollection([
-                    JobSetupInvokableFactory::setup(
-                        (new JobSetup())
-                            ->withSources($sources)
-                    ),
+                    JobSetupInvokableFactory::setup(),
                     TestSetupInvokableFactory::setupCollection([
                         (new TestSetup())
                             ->withSource('/app/source/' . $sources[0]),
@@ -183,10 +199,7 @@ class JobSourceFinderTest extends AbstractBaseFunctionalTest
             ],
             'tests exist for all sources' => [
                 'setup' => new InvokableCollection([
-                    JobSetupInvokableFactory::setup(
-                        (new JobSetup())
-                            ->withSources($sources)
-                    ),
+                    JobSetupInvokableFactory::setup(),
                     TestSetupInvokableFactory::setupCollection([
                         (new TestSetup())
                             ->withSource('/app/source/' . $sources[0]),

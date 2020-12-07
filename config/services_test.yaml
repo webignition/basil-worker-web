@@ -30,7 +30,7 @@ services:
     App\MessageHandler\CompileSourceHandler:
         public: true
 
-    App\Services\JobSourceFinder:
+    App\Services\SourcePathFinder:
         public: true
 
     App\Services\CompilationWorkflowHandler:
@@ -90,6 +90,9 @@ services:
         public: true
 
     App\Services\ApplicationState:
+        public: true
+
+    App\Services\SourceFactory:
         public: true
 
     App\Services\TestSerializer:

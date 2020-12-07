@@ -20,8 +20,9 @@ use App\Tests\Services\InvokableFactory\ApplicationStateGetterFactory;
 use App\Tests\Services\InvokableFactory\CompilationStateGetterFactory;
 use App\Tests\Services\InvokableFactory\ExecutionStateGetterFactory;
 use App\Tests\Services\InvokableFactory\JobSetup;
+use App\Tests\Services\InvokableFactory\SourceGetterFactory;
 use App\Tests\Services\InvokableHandler;
-use App\Tests\Services\SourceStoreInitializer;
+use App\Tests\Services\SourceFileStoreInitializer;
 use App\Tests\Services\UploadedFileFactory;
 use SebastianBergmann\Timer\Timer;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -48,7 +49,7 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
     {
         parent::setUp();
         $this->injectContainerServicesIntoClassProperties();
-        $this->initializeSourceStore();
+        $this->initializeSourceFileStore();
     }
 
     protected function tearDown(): void
@@ -86,8 +87,10 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
 
         $this->addJobSources($jobSetup->getManifestPath());
 
-        $job = $this->jobStore->getJob();
-        self::assertSame($expectedSourcePaths, $job->getSources());
+        self::assertSame(
+            $expectedSourcePaths,
+            $this->invokableHandler->invoke(SourceGetterFactory::getAllRelativePaths())
+        );
 
         $this->waitUntilApplicationWorkflowIsComplete();
 
@@ -144,12 +147,12 @@ abstract class AbstractEndToEndTest extends AbstractBaseIntegrationTest
         return $response;
     }
 
-    private function initializeSourceStore(): void
+    private function initializeSourceFileStore(): void
     {
-        $sourceStoreInitializer = self::$container->get(SourceStoreInitializer::class);
-        self::assertInstanceOf(SourceStoreInitializer::class, $sourceStoreInitializer);
-        if ($sourceStoreInitializer instanceof SourceStoreInitializer) {
-            $sourceStoreInitializer->initialize();
+        $sourceFileStoreInitializer = self::$container->get(SourceFileStoreInitializer::class);
+        self::assertInstanceOf(SourceFileStoreInitializer::class, $sourceFileStoreInitializer);
+        if ($sourceFileStoreInitializer instanceof SourceFileStoreInitializer) {
+            $sourceFileStoreInitializer->initialize();
         }
     }
 
