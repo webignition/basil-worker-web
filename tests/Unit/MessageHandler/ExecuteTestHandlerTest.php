@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
-use App\Entity\Test;
 use App\Message\ExecuteTest;
 use App\MessageHandler\ExecuteTestHandler;
-use App\Repository\TestRepository;
 use App\Services\ExecutionState;
-use App\Services\JobStore;
 use App\Services\TestStateMutator;
 use App\Tests\Mock\Entity\MockJob;
 use App\Tests\Mock\Entity\MockTest;
@@ -20,6 +17,10 @@ use App\Tests\Mock\Services\MockTestExecutor;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use webignition\BasilWorker\PersistenceBundle\Entity\Test;
+use webignition\BasilWorker\PersistenceBundle\Services\EntityPersister;
+use webignition\BasilWorker\PersistenceBundle\Services\Repository\TestRepository;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\JobStore;
 
 class ExecuteTestHandlerTest extends TestCase
 {
@@ -40,6 +41,7 @@ class ExecuteTestHandlerTest extends TestCase
 
         $handler = new ExecuteTestHandler(
             $jobStore,
+            \Mockery::mock(EntityPersister::class),
             $testExecutor,
             \Mockery::mock(EventDispatcherInterface::class),
             \Mockery::mock(TestStateMutator::class),
@@ -59,7 +61,7 @@ class ExecuteTestHandlerTest extends TestCase
         return [
             'no job' => [
                 'jobStore' => (new MockJobStore())
-                    ->withHasJobCall(false)
+                    ->withHasCall(false)
                     ->getMock(),
                 'executionState' => (new MockExecutionState())
                     ->getMock(),
@@ -70,8 +72,8 @@ class ExecuteTestHandlerTest extends TestCase
             ],
             'execution state not awaiting, not running' => [
                 'jobStore' => (new MockJobStore())
-                    ->withHasJobCall(true)
-                    ->withGetJobCall((new MockJob())->getMock())
+                    ->withHasCall(true)
+                    ->withGetCall((new MockJob())->getMock())
                     ->getMock(),
                 'executionState' => (new MockExecutionState())
                     ->withIsCall(ExecutionState::FINISHED_STATES, true)
@@ -83,8 +85,8 @@ class ExecuteTestHandlerTest extends TestCase
             ],
             'no test' => [
                 'jobStore' => (new MockJobStore())
-                    ->withHasJobCall(true)
-                    ->withGetJobCall((new MockJob())->getMock())
+                    ->withHasCall(true)
+                    ->withGetCall((new MockJob())->getMock())
                     ->getMock(),
                 'executionState' => (new MockExecutionState())
                     ->withIsCall(ExecutionState::FINISHED_STATES, false)
@@ -96,8 +98,8 @@ class ExecuteTestHandlerTest extends TestCase
             ],
             'test in wrong state' => [
                 'jobStore' => (new MockJobStore())
-                    ->withHasJobCall(true)
-                    ->withGetJobCall((new MockJob())->getMock())
+                    ->withHasCall(true)
+                    ->withGetCall((new MockJob())->getMock())
                     ->getMock(),
                 'executionState' => (new MockExecutionState())
                     ->withIsCall(ExecutionState::FINISHED_STATES, false)

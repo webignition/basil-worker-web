@@ -7,21 +7,22 @@ namespace App\Controller;
 use App\Event\SourcesAddedEvent;
 use App\Exception\MissingTestSourceException;
 use App\Model\Manifest;
-use App\Repository\SourceRepository;
-use App\Repository\TestRepository;
 use App\Request\AddSourcesRequest;
 use App\Request\JobCreateRequest;
 use App\Response\BadAddSourcesRequestResponse;
 use App\Response\BadJobCreateRequestResponse;
 use App\Services\CompilationState;
 use App\Services\ExecutionState;
-use App\Services\JobStore;
 use App\Services\SourceFactory;
 use App\Services\TestSerializer;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use webignition\BasilWorker\PersistenceBundle\Services\Factory\JobFactory;
+use webignition\BasilWorker\PersistenceBundle\Services\Repository\TestRepository;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\JobStore;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\SourceStore;
 
 class JobController extends AbstractController
 {
@@ -35,7 +36,7 @@ class JobController extends AbstractController
     /**
      * @Route("/create", name="create", methods={"POST"})
      */
-    public function create(JobCreateRequest $request): JsonResponse
+    public function create(JobFactory $jobFactory, JobCreateRequest $request): JsonResponse
     {
         if ('' === $request->getLabel()) {
             return BadJobCreateRequestResponse::createLabelMissingResponse();
@@ -49,11 +50,11 @@ class JobController extends AbstractController
             return BadJobCreateRequestResponse::createMaximumDurationMissingResponse();
         }
 
-        if (true === $this->jobStore->hasJob()) {
+        if (true === $this->jobStore->has()) {
             return BadJobCreateRequestResponse::createJobAlreadyExistsResponse();
         }
 
-        $this->jobStore->create(
+        $jobFactory->create(
             $request->getLabel(),
             $request->getCallbackUrl(),
             $request->getMaximumDurationInSeconds()
@@ -66,16 +67,16 @@ class JobController extends AbstractController
      * @Route("/add-sources", name="add-sources", methods={"POST"})
      */
     public function addSources(
-        SourceRepository $sourceRepository,
+        SourceStore $sourceStore,
         SourceFactory $sourceFactory,
         EventDispatcherInterface $eventDispatcher,
         AddSourcesRequest $addSourcesRequest
     ): JsonResponse {
-        if (false === $this->jobStore->hasJob()) {
+        if (false === $this->jobStore->has()) {
             return BadAddSourcesRequestResponse::createJobMissingResponse();
         }
 
-        if ([] !== $sourceRepository->findAll()) {
+        if (true === $sourceStore->hasAny()) {
             return BadAddSourcesRequestResponse::createSourcesNotEmptyResponse();
         }
 
@@ -106,23 +107,23 @@ class JobController extends AbstractController
      * @Route("/status", name="status", methods={"GET"})
      */
     public function status(
-        SourceRepository $sourceRepository,
+        SourceStore $sourceStore,
         TestRepository $testRepository,
         TestSerializer $testSerializer,
         CompilationState $compilationState,
         ExecutionState $executionState
     ): JsonResponse {
-        if (false === $this->jobStore->hasJob()) {
+        if (false === $this->jobStore->has()) {
             return new JsonResponse([], 400);
         }
 
-        $job = $this->jobStore->getJob();
+        $job = $this->jobStore->get();
         $tests = $testRepository->findAll();
 
         $data = array_merge(
             $job->jsonSerialize(),
             [
-                'sources' => $sourceRepository->findAllRelativePaths(),
+                'sources' => $sourceStore->findAllPaths(),
                 'compilation_state' => $compilationState->getCurrentState(),
                 'execution_state' => $executionState->getCurrentState(),
                 'tests' => $testSerializer->serializeCollection($tests),

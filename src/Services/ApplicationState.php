@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Repository\CallbackRepository;
-use App\Repository\SourceRepository;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\CallbackStore;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\JobStore;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\SourceStore;
 
 class ApplicationState
 {
@@ -21,23 +22,23 @@ class ApplicationState
     private CompilationState $compilationState;
     private ExecutionState $executionState;
     private CallbackState $callbackState;
-    private CallbackRepository $callbackRepository;
-    private SourceRepository $sourceRepository;
+    private CallbackStore $callbackStore;
+    private SourceStore $sourceStore;
 
     public function __construct(
         JobStore $jobStore,
         CompilationState $compilationState,
         ExecutionState $executionState,
         CallbackState $callbackState,
-        CallbackRepository $callbackRepository,
-        SourceRepository $sourceRepository
+        CallbackStore $callbackStore,
+        SourceStore $sourceStore
     ) {
         $this->jobStore = $jobStore;
         $this->compilationState = $compilationState;
         $this->executionState = $executionState;
         $this->callbackState = $callbackState;
-        $this->callbackRepository = $callbackRepository;
-        $this->sourceRepository = $sourceRepository;
+        $this->callbackStore = $callbackStore;
+        $this->sourceStore = $sourceStore;
     }
 
     /**
@@ -56,15 +57,15 @@ class ApplicationState
 
     public function getCurrentState(): string
     {
-        if (false === $this->jobStore->hasJob()) {
+        if (false === $this->jobStore->has()) {
             return self::STATE_AWAITING_JOB;
         }
 
-        if (0 !== $this->callbackRepository->getJobTimeoutTypeCount()) {
+        if (0 !== $this->callbackStore->getJobTimeoutTypeCount()) {
             return self::STATE_TIMED_OUT;
         }
 
-        if ([] === $this->sourceRepository->findAll()) {
+        if (false === $this->sourceStore->hasAny()) {
             return self::STATE_AWAITING_SOURCES;
         }
 

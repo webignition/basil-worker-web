@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Entity\Test;
 use App\Event\TestExecuteCompleteEvent;
 use App\Message\ExecuteTest;
-use App\Repository\TestRepository;
 use App\Services\ExecutionState;
-use App\Services\JobStore;
 use App\Services\TestExecutor;
 use App\Services\TestStateMutator;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
+use webignition\BasilWorker\PersistenceBundle\Entity\Test;
+use webignition\BasilWorker\PersistenceBundle\Services\EntityPersister;
+use webignition\BasilWorker\PersistenceBundle\Services\Repository\TestRepository;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\JobStore;
 
 class ExecuteTestHandler implements MessageHandlerInterface
 {
     private JobStore $jobStore;
+    private EntityPersister $entityPersister;
     private TestExecutor $testExecutor;
     private EventDispatcherInterface $eventDispatcher;
     private TestStateMutator $testStateMutator;
@@ -26,6 +28,7 @@ class ExecuteTestHandler implements MessageHandlerInterface
 
     public function __construct(
         JobStore $jobStore,
+        EntityPersister $entityPersister,
         TestExecutor $testExecutor,
         EventDispatcherInterface $eventDispatcher,
         TestStateMutator $testStateMutator,
@@ -33,6 +36,7 @@ class ExecuteTestHandler implements MessageHandlerInterface
         ExecutionState $executionState
     ) {
         $this->jobStore = $jobStore;
+        $this->entityPersister = $entityPersister;
         $this->testExecutor = $testExecutor;
         $this->eventDispatcher = $eventDispatcher;
         $this->testStateMutator = $testStateMutator;
@@ -42,7 +46,7 @@ class ExecuteTestHandler implements MessageHandlerInterface
 
     public function __invoke(ExecuteTest $message): void
     {
-        if (false === $this->jobStore->hasJob()) {
+        if (false === $this->jobStore->has()) {
             return;
         }
 
@@ -59,10 +63,10 @@ class ExecuteTestHandler implements MessageHandlerInterface
             return;
         }
 
-        $job = $this->jobStore->getJob();
+        $job = $this->jobStore->get();
         if (false === $job->hasStarted()) {
             $job->setStartDateTime();
-            $this->jobStore->store($job);
+            $this->entityPersister->persist($job);
         }
 
         $this->testStateMutator->setRunning($test);

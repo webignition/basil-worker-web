@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Repository\CallbackRepository;
+use webignition\BasilWorker\PersistenceBundle\Services\Repository\CallbackRepository;
+use webignition\BasilWorker\PersistenceBundle\Services\Store\CallbackStore;
 
 class CallbackState
 {
@@ -12,11 +13,13 @@ class CallbackState
     public const STATE_RUNNING = 'running';
     public const STATE_COMPLETE = 'complete';
 
-    private CallbackRepository $callbackRepository;
+    private CallbackStore $callbackStore;
+    private CallbackRepository $repository;
 
-    public function __construct(CallbackRepository $callbackRepository)
+    public function __construct(CallbackStore $callbackStore, CallbackRepository $repository)
     {
-        $this->callbackRepository = $callbackRepository;
+        $this->callbackStore = $callbackStore;
+        $this->repository = $repository;
     }
 
     /**
@@ -38,8 +41,8 @@ class CallbackState
      */
     private function getCurrentState(): string
     {
-        $callbackCount = $this->callbackRepository->count([]);
-        $finishedCallbackCount = $this->callbackRepository->getFinishedCount();
+        $callbackCount = $this->repository->count([]);
+        $finishedCallbackCount = $this->callbackStore->getFinishedCount();
 
         if (0 === $callbackCount) {
             return self::STATE_AWAITING;
