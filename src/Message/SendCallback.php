@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Message;
 
-class SendCallback
+class SendCallback extends AbstractSerializableMessage
 {
+    public const TYPE = 'send-callback';
+    public const PAYLOAD_KEY_CALLBACK_ID = 'callback_id';
+
     private int $callbackId;
 
     public function __construct(int $callbackId)
@@ -13,8 +16,30 @@ class SendCallback
         $this->callbackId = $callbackId;
     }
 
+    /**
+     * @param array<mixed> $data
+     *
+     * @return self
+     */
+    public static function createFromArray(array $data): self
+    {
+        return new SendCallback((int) ($data[self::PAYLOAD_KEY_CALLBACK_ID] ?? 0));
+    }
+
     public function getCallbackId(): int
     {
         return $this->callbackId;
+    }
+
+    public function getType(): string
+    {
+        return self::TYPE;
+    }
+
+    public function getPayload(): array
+    {
+        return [
+            self::PAYLOAD_KEY_CALLBACK_ID => $this->callbackId,
+        ];
     }
 }
