@@ -51,12 +51,6 @@ services:
     Symfony\Component\Yaml\Parser:
         class: Symfony\Component\Yaml\Parser
 
-    App\Services\Compiler:
-        arguments:
-            $client: '@app.services.compiler-client'
-            $compilerSourceDirectory: '%env(COMPILER_SOURCE_DIRECTORY)%'
-            $compilerTargetDirectory: '%env(COMPILER_TARGET_DIRECTORY)%'
-
     Psr\Http\Client\ClientInterface:
         class: GuzzleHttp\Client
 
@@ -70,10 +64,6 @@ services:
             $host: '%env(DELEGATOR_HOST)%'
             $port: '%env(DELEGATOR_PORT)%'
 
-    App\Services\TestExecutor:
-        arguments:
-            $delegatorClient: '@app.services.delegator-client'
-
     webignition\YamlDocumentGenerator\YamlGenerator:
         class: webignition\YamlDocumentGenerator\YamlGenerator
 
@@ -83,14 +73,6 @@ services:
             $compilerTargetDirectory: '%compiler_target_directory%'
 
     Symfony\Component\Yaml\Dumper: ~
-
-    App\Services\CallbackSender:
-        arguments:
-            $retryLimit: '%callback_retry_limit%'
-
-    App\MessageDispatcher\TimeoutCheckMessageDispatcher:
-        arguments:
-            $recheckPeriodInSeconds: '%job_timeout_check_period%'
 
     webignition\JsonMessageSerializerBundle\Services\MessageFactory:
         arguments:

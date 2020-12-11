@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Services;
 
-use App\Services\TestFactory;
 use webignition\BasilCompilerModels\TestManifest;
 use webignition\BasilModels\Test\Configuration as ModelTestConfiguration;
 use webignition\BasilWorker\PersistenceBundle\Entity\Test;
 use webignition\BasilWorker\PersistenceBundle\Entity\TestConfiguration;
 use webignition\BasilWorker\PersistenceBundle\Services\EntityPersister;
+use webignition\BasilWorker\PersistenceBundle\Services\Factory\TestFactory;
 
 class TestTestFactory
 {
@@ -38,7 +38,7 @@ class TestTestFactory
         int $stepCount,
         string $state = Test::STATE_AWAITING
     ): Test {
-        $tests = $this->testFactory->createFromManifestCollection([
+        $tests = $this->createFromManifestCollection([
             new TestManifest(
                 new ModelTestConfiguration($configuration->getBrowser(), $configuration->getUrl()),
                 $source,
@@ -52,5 +52,38 @@ class TestTestFactory
         $this->entityPersister->persist($test);
 
         return $test;
+    }
+
+    /**
+     * @param TestManifest[] $manifests
+     *
+     * @return Test[]
+     */
+    public function createFromManifestCollection(array $manifests): array
+    {
+        $tests = [];
+
+        foreach ($manifests as $manifest) {
+            if ($manifest instanceof TestManifest) {
+                $tests[] = $this->createFromManifest($manifest);
+            }
+        }
+
+        return $tests;
+    }
+
+    private function createFromManifest(TestManifest $manifest): Test
+    {
+        $manifestConfiguration = $manifest->getConfiguration();
+
+        return $this->testFactory->create(
+            TestConfiguration::create(
+                $manifestConfiguration->getBrowser(),
+                $manifestConfiguration->getUrl()
+            ),
+            $manifest->getSource(),
+            $manifest->getTarget(),
+            $manifest->getStepCount()
+        );
     }
 }

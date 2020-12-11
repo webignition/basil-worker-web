@@ -12,18 +12,6 @@ services:
     App\Services\TestStore:
         public: true
 
-    App\Services\Compiler:
-        public: true
-        arguments:
-            $client: '@app.services.compiler-client'
-            $compilerSourceDirectory: '%env(COMPILER_SOURCE_DIRECTORY)%'
-            $compilerTargetDirectory: '%env(COMPILER_TARGET_DIRECTORY)%'
-
-    App\Services\CallbackSender:
-        public: true
-        arguments:
-            $retryLimit: '%callback_retry_limit%'
-
     App\MessageHandler\CompileSourceHandler:
         public: true
 
@@ -32,11 +20,6 @@ services:
 
     App\Services\CompilationWorkflowHandler:
         public: true
-
-    App\Services\TestExecutor:
-        public: true
-        arguments:
-            $delegatorClient: '@app.services.delegator-client'
 
     App\MessageHandler\ExecuteTestHandler:
         public: true
@@ -97,11 +80,6 @@ services:
 
     App\MessageHandler\TimeoutCheckHandler:
         public: true
-
-    App\MessageDispatcher\TimeoutCheckMessageDispatcher:
-        public: true
-        arguments:
-            $recheckPeriodInSeconds: '%job_timeout_check_period%'
 
     App\Tests\Services\SourcesAddedEventSubscriber:
         public: true
