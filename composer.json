@@ -13,8 +13,6 @@
         "doctrine/doctrine-bundle": "^2.1",
         "doctrine/doctrine-migrations-bundle": "^3.0",
         "doctrine/orm": "^2.7",
-        "guzzlehttp/guzzle": "^7.1",
-        "psr/http-client": "^1.0",
         "symfony/console": "5.2.*",
         "symfony/dotenv": "5.2.*",
         "symfony/flex": "^1.9.8",
@@ -22,12 +20,8 @@
         "symfony/messenger": "5.2.*",
         "symfony/yaml": "5.2.*",
         "webignition/basil-compiler-models": "^0.14.0",
-        "webignition/basil-runner-documents": "^0.2.0",
         "webignition/basil-worker-persistence-bundle": "^0.7.0",
-        "webignition/symfony-messenger-json-message-serializer-bundle": "^0.1.0",
-        "webignition/tcp-cli-proxy-client": "^0.11.0",
-        "webignition/yaml-document": "^0.1.0",
-        "webignition/yaml-document-generator": "^0.2.0"
+        "webignition/symfony-messenger-json-message-serializer-bundle": "^0.1.0"
     },
     "require-dev": {
         "dama/doctrine-test-bundle": "^6.3",
@@ -105,9 +99,6 @@
         "static-analysis": "./vendor/bin/phpstan analyse --ansi",
         "test-unit": "./vendor/bin/phpunit --colors=always tests/Unit",
         "test-functional": "./vendor/bin/phpunit --colors=always tests/Functional",
-        "test-integration-sync": "./vendor/bin/phpunit -c phpunit.integration_sync.xml",
-        "test-integration-async": "./vendor/bin/phpunit -c phpunit.integration_async.xml",
-        "test-integration-listen": "php bin/console --env=integration_async messenger:consume async -vv",
         "test": [
             "@test-unit",
             "@test-functional"
