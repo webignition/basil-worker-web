@@ -7,7 +7,7 @@ namespace App\Tests\Services\InvokableFactory;
 use App\Tests\Model\EndToEndJob\Invokable;
 use App\Tests\Model\EndToEndJob\InvokableInterface;
 use App\Tests\Model\EndToEndJob\ServiceReference;
-use App\Tests\Services\SourcesAddedEventSubscriber;
+use App\Tests\Services\JobReadyEventSubscriber;
 use Symfony\Contracts\EventDispatcher\Event;
 
 class SourcesAddedEventGetter
@@ -15,11 +15,11 @@ class SourcesAddedEventGetter
     public static function get(): InvokableInterface
     {
         return new Invokable(
-            function (SourcesAddedEventSubscriber $sourcesAddedEventSubscriber): ?Event {
+            function (JobReadyEventSubscriber $sourcesAddedEventSubscriber): ?Event {
                 return $sourcesAddedEventSubscriber->getEvent();
             },
             [
-                new ServiceReference(SourcesAddedEventSubscriber::class),
+                new ServiceReference(JobReadyEventSubscriber::class),
             ]
         );
     }
