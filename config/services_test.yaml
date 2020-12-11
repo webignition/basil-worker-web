@@ -6,7 +6,7 @@ services:
     App\Services\ApplicationState:
         public: true
 
-    App\Tests\Services\SourcesAddedEventSubscriber:
+    App\Tests\Services\JobReadyEventSubscriber:
         public: true
 
     App\Tests\Services\TestTestFactory:
