@@ -46,4 +46,4 @@ services:
 
     webignition\JsonMessageSerializerBundle\Services\MessageFactory:
         arguments:
-            $typeToMessageClassMap: ~
+            $typeToMessageClassMap: []
