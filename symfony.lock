@@ -114,12 +114,6 @@
             ".php_cs.dist"
         ]
     },
-    "guzzlehttp/guzzle": {
-        "version": "7.1.1"
-    },
-    "guzzlehttp/promises": {
-        "version": "1.4.0"
-    },
     "guzzlehttp/psr7": {
         "version": "1.7.0"
     },
