@@ -25,6 +25,7 @@
     },
     "require-dev": {
         "dama/doctrine-test-bundle": "^6.3",
+        "guzzlehttp/guzzle": "^7.2",
         "mockery/mockery": "^1.4",
         "monolog/monolog": "^2.1",
         "php-mock/php-mock": "^2.2",
@@ -87,6 +88,10 @@
             "php bin/console doctrine:database:create --if-not-exists --quiet",
             "php bin/console doctrine:migrations:migrate --no-interaction --quiet"
         ],
+        "db-recreate": [
+            "php bin/console doctrine:database:drop --force --quiet",
+            "@db-setup"
+        ],
         "cs-ecs": "./vendor/bin/ecs check src tests --ansi --no-progress-bar --config ecs.php",
         "cs-phpcs": "./vendor/bin/phpcs",
         "cs": [
@@ -103,15 +108,16 @@
             "@test-unit",
             "@test-functional"
         ],
-        "integration-start": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml up -d",
-        "integration-status": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml ps",
-        "integration-stop": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml stop",
-        "integration-destroy": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml down",
+        "integration-start": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml -f tests/docker/self-compose.yml up -d --build",
+        "integration-status": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml -f tests/docker/self-compose.yml ps",
+        "integration-stop": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml -f tests/docker/self-compose.yml stop",
+        "integration-destroy": "docker-compose --env-file tests/docker/.env -f tests/docker/services-compose.yml -f tests/docker/self-compose.yml down",
         "integration-setup": [
             "@integration-start",
             "sleep 2",
             "@db-setup"
         ],
+        "test-integration": "./vendor/bin/phpunit tests/Integration/AppTest.php",
         "ci": [
             "@cs",
             "@static-analysis",
