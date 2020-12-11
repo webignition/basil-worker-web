@@ -15,7 +15,7 @@ services:
     App\Tests\Services\BasilFixtureHandler:
         public: true
         arguments:
-            $fixturesPath: '%kernel.project_dir%/tests/docker/fixtures/basil'
+            $fixturesPath: '%kernel.project_dir%/tests/Fixtures/Basil'
             $uploadedPath: '%kernel.project_dir%/tests/Fixtures/Uploaded'
 
     App\Tests\Services\SourceFileStoreInitializer:
