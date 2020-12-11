@@ -57,4 +57,4 @@ jobs:
       - name: Run tests
         run: composer test-functional
         env:
-          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/postgres?charset=UTF-8
+          DATABASE_URL: postgres://postgres:password!@127.0.0.1:5432/basil-worker-db?charset=UTF-8
