@@ -6,8 +6,6 @@
 parameters:
     compiler_source_directory: '%env(COMPILER_SOURCE_DIRECTORY)%'
     compiler_target_directory: '%env(COMPILER_TARGET_DIRECTORY)%'
-    callback_retry_limit: '%env(CALLBACK_RETRY_LIMIT)%'
-    job_timeout_check_period: '%env(JOB_TIMEOUT_CHECK_PERIOD)%'
 
 services:
     # default configuration for services in *this* file
@@ -41,43 +39,11 @@ services:
         arguments:
             $path: '%kernel.project_dir%/var/basil'
 
-    app.services.compiler-client:
-        class: webignition\TcpCliProxyClient\Client
-        factory: [ 'webignition\TcpCliProxyClient\Client', 'createFromHostAndPort' ]
-        arguments:
-            $host: '%env(COMPILER_HOST)%'
-            $port: '%env(COMPILER_PORT)%'
-
-    Symfony\Component\Yaml\Parser:
-        class: Symfony\Component\Yaml\Parser
-
-    Psr\Http\Client\ClientInterface:
-        class: GuzzleHttp\Client
-
-    webignition\TcpCliProxyClient\HandlerFactory:
-        class: webignition\TcpCliProxyClient\HandlerFactory
-
-    app.services.delegator-client:
-        class: webignition\TcpCliProxyClient\Client
-        factory: [ 'webignition\TcpCliProxyClient\Client', 'createFromHostAndPort' ]
-        arguments:
-            $host: '%env(DELEGATOR_HOST)%'
-            $port: '%env(DELEGATOR_PORT)%'
-
-    webignition\YamlDocumentGenerator\YamlGenerator:
-        class: webignition\YamlDocumentGenerator\YamlGenerator
-
     App\Services\SourcePathTranslator:
         arguments:
             $compilerSourceDirectory: '%compiler_source_directory%'
             $compilerTargetDirectory: '%compiler_target_directory%'
 
-    Symfony\Component\Yaml\Dumper: ~
-
     webignition\JsonMessageSerializerBundle\Services\MessageFactory:
         arguments:
-            $typeToMessageClassMap:
-                'compile-source': 'App\Message\CompileSource'
-                'execute-test': 'App\Message\ExecuteTest'
-                'send-callback': 'App\Message\SendCallback'
-                'timeout-check': 'App\Message\TimeoutCheck'
+            $typeToMessageClassMap: ~
