@@ -45,12 +45,20 @@ jobs:
         run: |
           [[ ! -z "$RELEASE_TAG_NAME" ]] && echo "::set-output name=value::$RELEASE_TAG_NAME" || echo "::set-output name=value::master"
 
-      - name: Build image
+      - name: Set deploy image conditional
+        id: deploy_image
+        if: ${{ (github.event_name == 'release' && github.event.action == 'published') || (github.event_name == 'push' && github.event.ref == 'refs/heads/master') }}
+        run: |
+          echo "::set-output name=deploy::true"
+
+      - name: Build test image
+        if: ${{ steps.deploy_image.outputs.deploy == '' }}
         env:
           TAG_NAME: ${{ steps.image_tag_name.outputs.value }}
         run: |
           ./build/build.sh
           composer test-integration
+
       - name: Set up Docker Buildx
         if: ${{ steps.deploy_image.outputs.deploy == 'true' }}
         uses: docker/setup-buildx-action@v1
