@@ -98,7 +98,7 @@ class JobControllerAddSourcesTest extends AbstractBaseFunctionalTest
         }
     }
 
-    public function testSourcesAddedEventIsDispatched()
+    public function testJobReadyEventIsDispatched()
     {
         self::assertEquals(
             new JobReadyEvent(),

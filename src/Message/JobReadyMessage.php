@@ -6,13 +6,13 @@ namespace App\Message;
 
 use webignition\JsonMessageSerializerBundle\Message\AbstractSerializableMessage;
 
-class JobReady extends AbstractSerializableMessage
+class JobReadyMessage extends AbstractSerializableMessage
 {
     public const TYPE = 'job-ready';
 
     public static function createFromArray(array $data): self
     {
-        return new JobReady();
+        return new JobReadyMessage();
     }
 
     public function getType(): string

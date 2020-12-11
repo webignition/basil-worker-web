@@ -47,4 +47,4 @@ services:
     webignition\JsonMessageSerializerBundle\Services\MessageFactory:
         arguments:
             $typeToMessageClassMap:
-                'job-ready': 'App\Message\JobReady'
+                'job-ready': 'App\Message\JobReadyMessage'
