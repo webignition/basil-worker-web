@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Services;
 
+use App\Model\UploadedFileKey;
 use App\Request\AddSourcesRequest;
 use App\Request\JobCreateRequest;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -38,9 +39,11 @@ class ClientRequestSender
      */
     public function addJobSources(UploadedFile $manifest, array $sourceUploadedFiles): Response
     {
+        $manifestKey = new UploadedFileKey(AddSourcesRequest::KEY_MANIFEST);
+
         $requestFiles = array_merge(
             [
-                AddSourcesRequest::KEY_MANIFEST => $manifest,
+                $manifestKey->encode() => $manifest,
             ],
             $sourceUploadedFiles
         );

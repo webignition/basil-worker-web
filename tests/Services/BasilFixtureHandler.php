@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Services;
 
+use App\Model\UploadedFileKey;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class BasilFixtureHandler
@@ -44,7 +45,9 @@ class BasilFixtureHandler
         $uploadedFiles = [];
 
         foreach ($relativePaths as $relativePath) {
-            $uploadedFiles[$relativePath] = $this->createUploadedFile($relativePath);
+            $key = new UploadedFileKey($relativePath);
+
+            $uploadedFiles[$key->encode()] = $this->createUploadedFile($relativePath);
         }
 
         return $uploadedFiles;
