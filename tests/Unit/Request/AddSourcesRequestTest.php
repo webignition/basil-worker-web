@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Request;
 
 use App\Model\Manifest;
+use App\Model\UploadedFileKey;
 use App\Model\UploadedSource;
 use App\Model\UploadedSourceCollection;
 use App\Request\AddSourcesRequest;
@@ -32,6 +33,8 @@ class AddSourcesRequestTest extends TestCase
         $source2 = (new MockUploadedFile())->getMock();
         $source3 = (new MockUploadedFile())->getMock();
 
+        $manifestKey = new UploadedFileKey(AddSourcesRequest::KEY_MANIFEST);
+
         return [
             'empty' => [
                 'request' => new Request(),
@@ -45,7 +48,7 @@ class AddSourcesRequestTest extends TestCase
                     [],
                     [],
                     [
-                        AddSourcesRequest::KEY_MANIFEST => $manifestUploadedFile,
+                        $manifestKey->encode() => $manifestUploadedFile,
                     ]
                 ),
                 'expectedManifest' => new Manifest($manifestUploadedFile),
@@ -58,9 +61,9 @@ class AddSourcesRequestTest extends TestCase
                     [],
                     [],
                     [
-                        'test1.yml' => $source1,
-                        'test2.yml' => $source2,
-                        'test3.yml' => $source3,
+                        (new UploadedFileKey('test1.yml'))->encode() => $source1,
+                        (new UploadedFileKey('test2.yml'))->encode() => $source2,
+                        (new UploadedFileKey('test3.yml'))->encode() => $source3,
                     ]
                 ),
                 'expectedManifest' => null,
@@ -77,10 +80,10 @@ class AddSourcesRequestTest extends TestCase
                     [],
                     [],
                     [
-                        AddSourcesRequest::KEY_MANIFEST => $manifestUploadedFile,
-                        'test1.yml' => $source1,
-                        'test2.yml' => $source2,
-                        'test3.yml' => $source3,
+                        $manifestKey->encode() => $manifestUploadedFile,
+                        (new UploadedFileKey('test1.yml'))->encode() => $source1,
+                        (new UploadedFileKey('test2.yml'))->encode() => $source2,
+                        (new UploadedFileKey('test3.yml'))->encode() => $source3,
                     ]
                 ),
                 'expectedManifest' => new Manifest($manifestUploadedFile),

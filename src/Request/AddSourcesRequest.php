@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Request;
 
 use App\Model\Manifest;
+use App\Model\UploadedFileKey;
 use App\Model\UploadedSource;
 use App\Model\UploadedSourceCollection;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -21,13 +22,19 @@ class AddSourcesRequest extends AbstractEncapsulatingRequest
     {
         $files = $request->files;
 
-        $manifest = $files->get(self::KEY_MANIFEST);
+        $manifestKey = new UploadedFileKey(self::KEY_MANIFEST);
+        $encodedManifestKey = $manifestKey->encode();
+
+        $manifest = $files->get($encodedManifestKey);
         $this->manifest = $manifest instanceof UploadedFile ? new Manifest($manifest) : null;
 
-        $files->remove(self::KEY_MANIFEST);
+        $files->remove($encodedManifestKey);
 
         $uploadedSources = [];
-        foreach ($files as $path => $file) {
+        foreach ($files as $encodedKey => $file) {
+            $key = UploadedFileKey::fromEncodedKey($encodedKey);
+            $path = (string) $key;
+
             if ($file instanceof UploadedFile) {
                 $uploadedSources[$path] = new UploadedSource($path, $file);
             }
