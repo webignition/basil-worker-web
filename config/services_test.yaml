@@ -3,9 +3,6 @@ services:
         autowire: true
         autoconfigure: true
 
-    App\Services\CallbackState:
-        public: true
-
     App\Tests\Services\JobReadyEventSubscriber:
         public: true
 
