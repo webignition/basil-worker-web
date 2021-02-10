@@ -17,7 +17,7 @@ class CallbackStateTest extends AbstractBaseFunctionalTest
 {
     use TestClassServicePropertyInjectorTrait;
 
-    private CallbackState $callbackStateFactory;
+    private CallbackState $callbackState;
     private InvokableHandler $invokableHandler;
 
     protected function setUp(): void
@@ -44,8 +44,8 @@ class CallbackStateTest extends AbstractBaseFunctionalTest
 
         $this->invokableHandler->invoke(new InvokableCollection($callbackCreationInvocations));
 
-        self::assertTrue($this->callbackStateFactory->is(...$expectedIsStates));
-        self::assertFalse($this->callbackStateFactory->is(...$expectedIsNotStates));
+        self::assertTrue($this->callbackState->is(...$expectedIsStates));
+        self::assertFalse($this->callbackState->is(...$expectedIsNotStates));
     }
 
     public function isDataProvider(): array
