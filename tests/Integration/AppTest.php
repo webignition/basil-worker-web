@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Model\UploadedFileKey;
+use App\Request\AddSourcesRequest;
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
 use PHPUnit\Framework\TestCase;
 
 class AppTest extends TestCase
@@ -15,7 +18,7 @@ class AppTest extends TestCase
     {
         parent::setUpBeforeClass();
 
-        exec('composer db-recreate');
+        exec('composer db-recreate --quiet');
     }
 
     protected function setUp(): void
@@ -36,29 +39,92 @@ class AppTest extends TestCase
         ]);
 
         self::assertSame(200, $response->getStatusCode());
+
+        $this->assertJobStatus([
+            'label' => md5('label content'),
+            'callback_url' => 'http://example.com/callback',
+            'maximum_duration_in_seconds' => 600,
+            'sources' => [],
+            'compilation_state' => 'awaiting',
+            'execution_state' => 'awaiting',
+            'tests' => [],
+        ]);
     }
 
-    public function testGetJobStatus()
+    public function testAddSources()
     {
-        $response = $this->httpClient->get('http://localhost:9090/status');
+        $manifestKey = new UploadedFileKey(AddSourcesRequest::KEY_MANIFEST);
+
+        $response = $this->httpClient->post('http://localhost:9090/add-sources', [
+            'multipart' => [
+                [
+                    'name' => $manifestKey->encode(),
+                    'contents' => file_get_contents(
+                        getcwd() . '/tests/Fixtures/Manifest/manifest.txt'
+                    ),
+                    'filename' => 'manifest.txt'
+                ],
+                $this->createFileUploadData('Test/chrome-open-index.yml'),
+                $this->createFileUploadData('Test/chrome-firefox-open-index.yml'),
+                $this->createFileUploadData('Test/chrome-open-form.yml'),
+                $this->createFileUploadData('Page/index.yml'),
+            ],
+        ]);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $this->assertJobStatus([
+            'label' => md5('label content'),
+            'callback_url' => 'http://example.com/callback',
+            'maximum_duration_in_seconds' => 600,
+            'sources' => [
+                'Test/chrome-open-index.yml',
+                'Test/chrome-firefox-open-index.yml',
+                'Test/chrome-open-form.yml',
+                'Page/index.yml',
+            ],
+            'compilation_state' => 'running',
+            'execution_state' => 'awaiting',
+            'tests' => [],
+        ]);
+    }
+
+    /**
+     * @param array<mixed> $expectedJobData
+     */
+    private function assertJobStatus(array $expectedJobData): void
+    {
+        self::assertSame($expectedJobData, $this->getJsonResponse('http://localhost:9090/status'));
+    }
+
+    /**
+     * @param string $url
+     *
+     * @return array<mixed>
+     */
+    private function getJsonResponse(string $url): array
+    {
+        $response = $this->httpClient->sendRequest(new Request('GET', $url));
 
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('application/json', $response->getHeaderLine('content-type'));
 
         $body = $response->getBody()->getContents();
-        $bodyData = json_decode($body, true);
 
-        self::assertSame(
-            [
-                'label' => md5('label content'),
-                'callback_url' => 'http://example.com/callback',
-                'maximum_duration_in_seconds' => 600,
-                'sources' => [],
-                'compilation_state' => 'awaiting',
-                'execution_state' => 'awaiting',
-                'tests' => [],
-            ],
-            $bodyData
-        );
+        return  json_decode($body, true);
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return array<string, string>
+     */
+    private function createFileUploadData(string $path): array
+    {
+        return [
+            'name' => base64_encode($path),
+            'contents' => (string) file_get_contents(getcwd() . '/tests/Fixtures/Basil/' . $path),
+            'filename' => $path
+        ];
     }
 }

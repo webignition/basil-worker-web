@@ -28,6 +28,7 @@ class JobControllerAddSourcesTest extends AbstractBaseFunctionalTest
         'Test/chrome-open-index.yml',
         'Test/chrome-firefox-open-index.yml',
         'Test/chrome-open-form.yml',
+        'Page/index.yml',
     ];
 
     private Response $response;
