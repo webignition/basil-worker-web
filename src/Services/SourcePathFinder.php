@@ -29,14 +29,15 @@ class SourcePathFinder
     public function findCompiledPaths(): array
     {
         $sources = $this->testRepository->findAllSources();
-        return $this->sourcePathTranslator->stripCompilerSourceDirectoryFromPaths($sources);
+
+        return $this->removeCompilerSourceDirectoryPrefixFromPaths($sources);
     }
 
     public function findNextNonCompiledPath(): ?string
     {
         $sourcePaths = $this->sourceStore->findAllPaths();
         $testPaths = $this->testRepository->findAllSources();
-        $testPaths = $this->sourcePathTranslator->stripCompilerSourceDirectoryFromPaths($testPaths);
+        $testPaths = $this->removeCompilerSourceDirectoryPrefixFromPaths($testPaths);
 
         foreach ($sourcePaths as $sourcePath) {
             if (!in_array($sourcePath, $testPaths)) {
@@ -45,5 +46,23 @@ class SourcePathFinder
         }
 
         return null;
+    }
+
+    /**
+     * @param string[] $paths
+     *
+     * @return string[]
+     */
+    private function removeCompilerSourceDirectoryPrefixFromPaths(array $paths): array
+    {
+        $strippedPaths = [];
+
+        foreach ($paths as $path) {
+            if (is_string($path)) {
+                $strippedPaths[] = $this->sourcePathTranslator->stripCompilerSourceDirectory($path);
+            }
+        }
+
+        return $strippedPaths;
     }
 }
