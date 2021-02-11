@@ -6,21 +6,22 @@ namespace App\Services;
 
 use webignition\BasilWorker\PersistenceBundle\Services\Repository\TestRepository;
 use webignition\BasilWorker\PersistenceBundle\Services\Store\SourceStore;
+use webignition\StringPrefixRemover\DefinedStringPrefixRemover;
 
 class SourcePathFinder
 {
     private TestRepository $testRepository;
     private SourceStore $sourceStore;
-    private SourcePathTranslator $sourcePathTranslator;
+    private DefinedStringPrefixRemover $compilerSourcePathPrefixRemover;
 
     public function __construct(
         TestRepository $testRepository,
         SourceStore $sourceStore,
-        SourcePathTranslator $sourcePathTranslator
+        DefinedStringPrefixRemover $compilerSourcePathPrefixRemover
     ) {
         $this->testRepository = $testRepository;
         $this->sourceStore = $sourceStore;
-        $this->sourcePathTranslator = $sourcePathTranslator;
+        $this->compilerSourcePathPrefixRemover = $compilerSourcePathPrefixRemover;
     }
 
     /**
@@ -59,7 +60,7 @@ class SourcePathFinder
 
         foreach ($paths as $path) {
             if (is_string($path)) {
-                $strippedPaths[] = $this->sourcePathTranslator->stripCompilerSourceDirectory($path);
+                $strippedPaths[] = $this->compilerSourcePathPrefixRemover->remove($path);
             }
         }
 

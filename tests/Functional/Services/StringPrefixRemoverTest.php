@@ -2,38 +2,43 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Services;
+namespace App\Tests\Functional\Services;
 
-use App\Services\SourcePathTranslator;
-use PHPUnit\Framework\TestCase;
+use App\Tests\AbstractBaseFunctionalTest;
+use webignition\StringPrefixRemover\DefinedStringPrefixRemover;
 
-class SourcePathTranslatorTest extends TestCase
+class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
 {
     private const COMPILER_SOURCE_DIRECTORY = '/app/source';
     private const COMPILER_TARGET_DIRECTORY = '/app/tests';
 
-    private SourcePathTranslator $sourcePathTranslator;
+    private DefinedStringPrefixRemover $compilerSourceRemover;
+    private DefinedStringPrefixRemover $compilerTargetRemover;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->sourcePathTranslator = new SourcePathTranslator(
-            self::COMPILER_SOURCE_DIRECTORY,
-            self::COMPILER_TARGET_DIRECTORY
-        );
-    }
+        $compilerSourceRemover = self::$container->get('app.services.path-prefix-remover.compiler-source');
+        if ($compilerSourceRemover instanceof DefinedStringPrefixRemover) {
+            $this->compilerSourceRemover = $compilerSourceRemover;
+        }
 
+        $compilerTargetRemover = self::$container->get('app.services.path-prefix-remover.compiler-target');
+        if ($compilerTargetRemover instanceof DefinedStringPrefixRemover) {
+            $this->compilerTargetRemover = $compilerTargetRemover;
+        }
+    }
 
     /**
-     * @dataProvider stripCompilerSourceDirectoryDataProvider
+     * @dataProvider compilerSourceRemoverDataProvider
      */
-    public function testStripCompilerSourceDirectory(string $path, string $expectedPath)
+    public function testCompilerSourceRemover(string $path, string $expectedPath)
     {
-        self::assertSame($expectedPath, $this->sourcePathTranslator->stripCompilerSourceDirectory($path));
+        self::assertSame($expectedPath, $this->compilerSourceRemover->remove($path));
     }
 
-    public function stripCompilerSourceDirectoryDataProvider(): array
+    public function compilerSourceRemoverDataProvider(): array
     {
         return [
             'path shorter than prefix' => [
@@ -52,14 +57,14 @@ class SourcePathTranslatorTest extends TestCase
     }
 
     /**
-     * @dataProvider stripCompilerTargetDirectoryDataProvider
+     * @dataProvider compilerTargetRemoverDataProvider
      */
-    public function testStripCompilerTargetDirectory(string $path, string $expectedPath)
+    public function testCompilerTargetRemover(string $path, string $expectedPath)
     {
-        self::assertSame($expectedPath, $this->sourcePathTranslator->stripCompilerTargetDirectory($path));
+        self::assertSame($expectedPath, $this->compilerTargetRemover->remove($path));
     }
 
-    public function stripCompilerTargetDirectoryDataProvider(): array
+    public function compilerTargetRemoverDataProvider(): array
     {
         return [
             'path shorter than prefix' => [
