@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace App\Services;
 
 use webignition\BasilWorker\PersistenceBundle\Entity\Test;
+use webignition\StringPrefixRemover\DefinedStringPrefixRemover;
 
 class TestSerializer
 {
-    private SourcePathTranslator $sourcePathTranslator;
+    private DefinedStringPrefixRemover $compilerSourcePathPrefixRemover;
+    private DefinedStringPrefixRemover $compilerTargetPathPrefixRemover;
 
-    public function __construct(SourcePathTranslator $sourcePathTranslator)
-    {
-        $this->sourcePathTranslator = $sourcePathTranslator;
+    public function __construct(
+        DefinedStringPrefixRemover $compilerSourcePathPrefixRemover,
+        DefinedStringPrefixRemover $compilerTargetPathPrefixRemover
+    ) {
+        $this->compilerSourcePathPrefixRemover = $compilerSourcePathPrefixRemover;
+        $this->compilerTargetPathPrefixRemover = $compilerTargetPathPrefixRemover;
     }
 
     /**
@@ -43,8 +48,8 @@ class TestSerializer
         return array_merge(
             $test->jsonSerialize(),
             [
-                'source' => $this->sourcePathTranslator->stripCompilerSourceDirectory((string) $test->getSource()),
-                'target' => $this->sourcePathTranslator->stripCompilerTargetDirectory((string) $test->getTarget()),
+                'source' => $this->compilerSourcePathPrefixRemover->remove((string) $test->getSource()),
+                'target' => $this->compilerTargetPathPrefixRemover->remove((string) $test->getTarget()),
             ]
         );
     }

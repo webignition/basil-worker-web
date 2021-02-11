@@ -39,12 +39,26 @@ services:
         arguments:
             $path: '%kernel.project_dir%/var/basil'
 
-    App\Services\SourcePathTranslator:
-        arguments:
-            $compilerSourceDirectory: '%compiler_source_directory%'
-            $compilerTargetDirectory: '%compiler_target_directory%'
-
     webignition\JsonMessageSerializerBundle\Services\MessageFactory:
         arguments:
             $typeToMessageClassMap:
                 'job-ready': 'App\Message\JobReadyMessage'
+
+    app.services.path-prefix-remover.compiler-source:
+        class: webignition\StringPrefixRemover\DefinedStringPrefixRemover
+        arguments:
+            $prefix: '%compiler_source_directory%/'
+
+    app.services.path-prefix-remover.compiler-target:
+        class: webignition\StringPrefixRemover\DefinedStringPrefixRemover
+        arguments:
+            $prefix: '%compiler_target_directory%/'
+
+    App\Services\TestSerializer:
+        arguments:
+            $compilerSourcePathPrefixRemover: '@app.services.path-prefix-remover.compiler-source'
+            $compilerTargetPathPrefixRemover: '@app.services.path-prefix-remover.compiler-target'
+
+    App\Services\SourcePathFinder:
+        arguments:
+            $compilerSourcePathPrefixRemover: '@app.services.path-prefix-remover.compiler-source'
