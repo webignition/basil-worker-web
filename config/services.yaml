@@ -59,6 +59,6 @@ services:
             $compilerSourcePathPrefixRemover: '@app.services.path-prefix-remover.compiler-source'
             $compilerTargetPathPrefixRemover: '@app.services.path-prefix-remover.compiler-target'
 
-    App\Services\SourcePathFinder:
-        arguments:
-            $compilerSourcePathPrefixRemover: '@app.services.path-prefix-remover.compiler-source'
+    webignition\BasilWorker\StateBundle\Services\SourcePathFinder:
+        calls:
+            - setCompilerSourcePathPrefixRemover: ['@app.services.path-prefix-remover.compiler-source']

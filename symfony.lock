@@ -548,6 +548,9 @@
     "webignition/basil-worker-persistence-bundle": {
         "version": "0.1"
     },
+    "webignition/basil-worker-state-bundle": {
+        "version": "0.1"
+    },
     "webignition/http-history-container": {
         "version": "1.2"
     },
