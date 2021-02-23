@@ -28,7 +28,7 @@ class AppTest extends TestCase
         $this->httpClient = new Client();
     }
 
-    public function testCreateJob()
+    public function testCreateJob(): void
     {
         $response = $this->httpClient->post('http://localhost:9090/create', [
             'form_params' => [
@@ -51,7 +51,7 @@ class AppTest extends TestCase
         ]);
     }
 
-    public function testAddSources()
+    public function testAddSources(): void
     {
         $manifestKey = new UploadedFileKey(AddSourcesRequest::KEY_MANIFEST);
 

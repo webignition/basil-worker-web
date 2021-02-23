@@ -67,14 +67,14 @@ class JobControllerAddSourcesTest extends AbstractBaseFunctionalTest
         ));
     }
 
-    public function testResponse()
+    public function testResponse(): void
     {
         self::assertSame(200, $this->response->getStatusCode());
         self::assertSame('application/json', $this->response->headers->get('content-type'));
         self::assertSame('{}', $this->response->getContent());
     }
 
-    public function testSourcesAreCreated()
+    public function testSourcesAreCreated(): void
     {
         self::assertSame(
             self::EXPECTED_SOURCES,
@@ -82,7 +82,7 @@ class JobControllerAddSourcesTest extends AbstractBaseFunctionalTest
         );
     }
 
-    public function testSourcesAreStored()
+    public function testSourcesAreStored(): void
     {
         foreach (self::EXPECTED_SOURCES as $expectedSource) {
             self::assertTrue(
@@ -99,7 +99,7 @@ class JobControllerAddSourcesTest extends AbstractBaseFunctionalTest
         }
     }
 
-    public function testJobReadyEventIsDispatched()
+    public function testJobReadyEventIsDispatched(): void
     {
         self::assertEquals(
             new JobReadyEvent(),

@@ -25,7 +25,7 @@ class ManifestTest extends TestCase
         UploadedFile $uploadedFile,
         string $manifestContent,
         array $expectedTestPaths
-    ) {
+    ): void {
         PHPMockery::mock('App\Model', 'file_get_contents')
             ->andReturn($manifestContent);
 
@@ -34,6 +34,9 @@ class ManifestTest extends TestCase
         self::assertSame($expectedTestPaths, $manifest->getTestPaths());
     }
 
+    /**
+     * @return array[]
+     */
     public function createDataProvider(): array
     {
         $uploadedFile = (new MockUploadedFile())

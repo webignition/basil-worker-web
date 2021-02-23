@@ -18,14 +18,20 @@ class AddSourcesRequestTest extends TestCase
     /**
      * @dataProvider createDataProvider
      */
-    public function testCreate(Request $request, ?Manifest $expectedManifest, UploadedSourceCollection $expectedSources)
-    {
+    public function testCreate(
+        Request $request,
+        ?Manifest $expectedManifest,
+        UploadedSourceCollection $expectedSources
+    ): void {
         $addSourcesRequest = new AddSourcesRequest($request);
 
         self::assertEquals($expectedManifest, $addSourcesRequest->getManifest());
         self::assertEquals($expectedSources, $addSourcesRequest->getUploadedSources());
     }
 
+    /**
+     * @return array[]
+     */
     public function createDataProvider(): array
     {
         $manifestUploadedFile = (new MockUploadedFile())->getMock();

@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 
 class JobCreateRequestTest extends TestCase
 {
-    public function testCreate()
+    public function testCreate(): void
     {
         $label = md5('label source');
         $callbackUrl = 'http://example.com/callback';

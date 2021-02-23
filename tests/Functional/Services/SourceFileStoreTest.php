@@ -41,7 +41,7 @@ class SourceFileStoreTest extends AbstractBaseFunctionalTest
         string $uploadedFileFixturePath,
         string $relativePath,
         File $expectedFile
-    ) {
+    ): void {
         self::assertFalse($this->store->has($relativePath));
 
         $expectedFilePath = $expectedFile->getPathname();
@@ -67,6 +67,9 @@ class SourceFileStoreTest extends AbstractBaseFunctionalTest
         self::assertTrue($this->store->has($relativePath));
     }
 
+    /**
+     * @return array[]
+     */
     public function storeDataProvider(): array
     {
         return [
