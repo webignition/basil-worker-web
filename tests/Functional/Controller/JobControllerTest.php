@@ -35,7 +35,7 @@ class JobControllerTest extends AbstractBaseFunctionalTest
         $this->injectContainerServicesIntoClassProperties();
     }
 
-    public function testCreate()
+    public function testCreate(): void
     {
         self::assertFalse($this->jobStore->has());
 
@@ -74,7 +74,7 @@ class JobControllerTest extends AbstractBaseFunctionalTest
     /**
      * @dataProvider statusDataProvider
      */
-    public function testStatus(InvokableInterface $setup, JsonResponse $expectedResponse)
+    public function testStatus(InvokableInterface $setup, JsonResponse $expectedResponse): void
     {
         $this->invokableHandler->invoke($setup);
 
@@ -93,6 +93,9 @@ class JobControllerTest extends AbstractBaseFunctionalTest
         );
     }
 
+    /**
+     * @return array[]
+     */
     public function statusDataProvider(): array
     {
         return [

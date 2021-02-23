@@ -30,7 +30,7 @@ class JobReadyMessageDispatcherTest extends AbstractBaseFunctionalTest
     }
 
 
-    public function testDispatch()
+    public function testDispatch(): void
     {
         $this->messengerAsserter->assertQueueIsEmpty();
 
@@ -43,7 +43,7 @@ class JobReadyMessageDispatcherTest extends AbstractBaseFunctionalTest
     /**
      * @dataProvider subscribesToEventDataProvider
      */
-    public function testSubscribesToEvent(Event $event, JobReadyMessage $expectedQueuedMessage)
+    public function testSubscribesToEvent(Event $event, JobReadyMessage $expectedQueuedMessage): void
     {
         $this->messengerAsserter->assertQueueIsEmpty();
 
@@ -56,6 +56,9 @@ class JobReadyMessageDispatcherTest extends AbstractBaseFunctionalTest
         );
     }
 
+    /**
+     * @return array[]
+     */
     public function subscribesToEventDataProvider(): array
     {
         return [

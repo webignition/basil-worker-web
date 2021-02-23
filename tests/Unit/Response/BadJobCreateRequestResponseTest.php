@@ -10,28 +10,28 @@ use Symfony\Component\HttpFoundation\Response;
 
 class BadJobCreateRequestResponseTest extends TestCase
 {
-    public function testCreateLabelMissingResponse()
+    public function testCreateLabelMissingResponse(): void
     {
         $response = BadJobCreateRequestResponse::createLabelMissingResponse();
 
         self::assertResponse('label missing', 100, $response);
     }
 
-    public function testCreateCallbackUrlMissingResponse()
+    public function testCreateCallbackUrlMissingResponse(): void
     {
         $response = BadJobCreateRequestResponse::createCallbackUrlMissingResponse();
 
         self::assertResponse('callback url missing', 200, $response);
     }
 
-    public function testCreateJobAlreadyExistsResponse()
+    public function testCreateJobAlreadyExistsResponse(): void
     {
         $response = BadJobCreateRequestResponse::createJobAlreadyExistsResponse();
 
         self::assertResponse('job already exists', 300, $response);
     }
 
-    public function testCreateMaximumDurationMissingResponse()
+    public function testCreateMaximumDurationMissingResponse(): void
     {
         $response = BadJobCreateRequestResponse::createMaximumDurationMissingResponse();
 

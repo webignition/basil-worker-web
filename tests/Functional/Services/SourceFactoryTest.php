@@ -67,7 +67,7 @@ class SourceFactoryTest extends AbstractBaseFunctionalTest
         array $uploadedSourcePaths,
         array $expectedStoredTestPaths,
         array $expectedSources
-    ) {
+    ): void {
         $manifestUploadedFile = $this->invokableHandler->invoke(new Invokable(
             function (UploadedFileFactory $uploadedFileFactory, string $manifestPath) {
                 return $uploadedFileFactory->createForManifest($manifestPath);
@@ -120,6 +120,9 @@ class SourceFactoryTest extends AbstractBaseFunctionalTest
         }
     }
 
+    /**
+     * @return array[]
+     */
     public function createCollectionFromManifestDataProvider(): array
     {
         return [

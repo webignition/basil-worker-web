@@ -35,7 +35,7 @@ class JobControllerTest extends TestCase
         JobStore $jobStore,
         JobFactory $jobFactory,
         JsonResponse $expectedResponse
-    ) {
+    ): void {
         $controller = new JobController($jobStore);
 
         $response = $controller->create($jobFactory, $jobCreateRequest);
@@ -51,6 +51,9 @@ class JobControllerTest extends TestCase
         );
     }
 
+    /**
+     * @return array[]
+     */
     public function createDataProvider(): array
     {
         return [
@@ -119,7 +122,7 @@ class JobControllerTest extends TestCase
         SourceStore $sourceStore,
         SourceFactory $sourceFactory,
         JsonResponse $expectedResponse
-    ) {
+    ): void {
         $controller = new JobController($jobStore);
 
         $response = $controller->addSources(
@@ -140,6 +143,9 @@ class JobControllerTest extends TestCase
         );
     }
 
+    /**
+     * @return array[]
+     */
     public function addSourcesDataProvider(): array
     {
         $job = (new MockJob())

@@ -18,7 +18,7 @@ class SourceFactoryTest extends TestCase
     /**
      * @dataProvider createCollectionFromManifestThrowsExceptionDataProvider
      */
-    public function testCreateCollectionFromManifestThrowsException(UploadedSourceCollection $uploadedSources)
+    public function testCreateCollectionFromManifestThrowsException(UploadedSourceCollection $uploadedSources): void
     {
         $factory = new SourceFactory(
             \Mockery::mock(SourceFileStore::class),
@@ -39,6 +39,9 @@ class SourceFactoryTest extends TestCase
         $factory->createCollectionFromManifest($manifest, $uploadedSources);
     }
 
+    /**
+     * @return array[]
+     */
     public function createCollectionFromManifestThrowsExceptionDataProvider(): array
     {
         return [

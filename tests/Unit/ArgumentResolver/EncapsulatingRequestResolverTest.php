@@ -28,13 +28,16 @@ class EncapsulatingRequestResolverTest extends TestCase
     /**
      * @dataProvider supportsDataProvider
      */
-    public function testSupports(ArgumentMetadata $argumentMetadata, bool $expectedSupports)
+    public function testSupports(ArgumentMetadata $argumentMetadata, bool $expectedSupports): void
     {
         $request = \Mockery::mock(Request::class);
 
         self::assertSame($expectedSupports, $this->resolver->supports($request, $argumentMetadata));
     }
 
+    /**
+     * @return array[]
+     */
     public function supportsDataProvider(): array
     {
         return [
@@ -61,13 +64,16 @@ class EncapsulatingRequestResolverTest extends TestCase
         Request $request,
         ArgumentMetadata $argumentMetadata,
         EncapsulatingRequestInterface $expectedEncapsulatingRequest
-    ) {
+    ): void {
         $generator = $this->resolver->resolve($request, $argumentMetadata);
         $encapsulatingRequest = $generator->current();
 
         self::assertEquals($expectedEncapsulatingRequest, $encapsulatingRequest);
     }
 
+    /**
+     * @return array[]
+     */
     public function resolveJobCreateRequestDataProvider(): array
     {
         $label = 'label content';
@@ -106,6 +112,9 @@ class EncapsulatingRequestResolverTest extends TestCase
         ];
     }
 
+    /**
+     * @return array[]
+     */
     public function resolveAddSourcesRequestDataProvider(): array
     {
         $manifest = (new MockUploadedFile())->getMock();

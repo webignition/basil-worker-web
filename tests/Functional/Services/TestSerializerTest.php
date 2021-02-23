@@ -30,7 +30,7 @@ class TestSerializerTest extends AbstractBaseFunctionalTest
      *
      * @param array<mixed> $expectedSerializedTest
      */
-    public function testSerialize(InvokableInterface $setup, array $expectedSerializedTest)
+    public function testSerialize(InvokableInterface $setup, array $expectedSerializedTest): void
     {
         $test = $this->invokableHandler->invoke($setup);
 
@@ -40,6 +40,9 @@ class TestSerializerTest extends AbstractBaseFunctionalTest
         );
     }
 
+    /**
+     * @return array[]
+     */
     public function serializeDataProvider(): array
     {
         return [

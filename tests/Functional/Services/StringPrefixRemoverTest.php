@@ -33,11 +33,14 @@ class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
     /**
      * @dataProvider compilerSourceRemoverDataProvider
      */
-    public function testCompilerSourceRemover(string $path, string $expectedPath)
+    public function testCompilerSourceRemover(string $path, string $expectedPath): void
     {
         self::assertSame($expectedPath, $this->compilerSourceRemover->remove($path));
     }
 
+    /**
+     * @return array[]
+     */
     public function compilerSourceRemoverDataProvider(): array
     {
         return [
@@ -59,11 +62,14 @@ class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
     /**
      * @dataProvider compilerTargetRemoverDataProvider
      */
-    public function testCompilerTargetRemover(string $path, string $expectedPath)
+    public function testCompilerTargetRemover(string $path, string $expectedPath): void
     {
         self::assertSame($expectedPath, $this->compilerTargetRemover->remove($path));
     }
 
+    /**
+     * @return array[]
+     */
     public function compilerTargetRemoverDataProvider(): array
     {
         return [
