@@ -1,4 +1,4 @@
-FROM php:7.4-fpm-buster
+FROM php:8-fpm-buster
 
 WORKDIR /app
 
@@ -15,6 +15,7 @@ ENV COMPILER_TARGET_DIRECTORY=$COMPILER_TARGET_DIRECTORY
 ENV MESSENGER_TRANSPORT_DSN=$MESSENGER_TRANSPORT_DSN
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/install-php-extensions
 COPY composer.json composer.lock /app/
 COPY bin/console /app/bin/console
 COPY public/index.php public/
@@ -32,8 +33,8 @@ RUN apt-get -qq update && apt-get -qq -y install  \
   && docker-php-ext-install \
   pdo_pgsql \
   zip \
-  && pecl install amqp \
-  && docker-php-ext-enable amqp \
+  && install-php-extensions amqp \
+  && rm /usr/bin/install-php-extensions \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
   && composer check-platform-reqs --ansi \
