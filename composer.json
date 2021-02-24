@@ -26,7 +26,7 @@
         "webignition/symfony-messenger-json-message-serializer-bundle": "^0.1.0"
     },
     "require-dev": {
-        "dama/doctrine-test-bundle": "^6.3",
+        "dama/doctrine-test-bundle": "^6.5",
         "guzzlehttp/guzzle": "^7.2",
         "mockery/mockery": "^1.4",
         "monolog/monolog": "^2.1",
