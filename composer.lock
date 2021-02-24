@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6e5062aae64363c92dc09953d79639bc",
+    "content-hash": "69b80b60b2cd3c127ea71b57d0a417fb",
     "packages": [
         {
             "name": "composer/package-versions-deprecated",
@@ -10028,36 +10028,36 @@
         },
         {
             "name": "webignition/http-history-container",
-            "version": "1.15",
+            "version": "1.16",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webignition/http-history-container.git",
-                "reference": "4092da7c8cd3f45f7e6eb8274f738d5f8c6656ae"
+                "reference": "48541232457bdf430fe88d2ea626d4fce23e38dd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webignition/http-history-container/zipball/4092da7c8cd3f45f7e6eb8274f738d5f8c6656ae",
-                "reference": "4092da7c8cd3f45f7e6eb8274f738d5f8c6656ae",
+                "url": "https://api.github.com/repos/webignition/http-history-container/zipball/48541232457bdf430fe88d2ea626d4fce23e38dd",
+                "reference": "48541232457bdf430fe88d2ea626d4fce23e38dd",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
                 "guzzlehttp/psr7": "^1.7",
-                "php": ">=7.4.0",
-                "psr/http-message": "^1",
+                "php": ">=7.4.0|^8",
+                "psr/http-message": "^1.0",
                 "psr/log": "^1.1"
             },
             "require-dev": {
                 "mockery/mockery": "^1.4",
-                "monolog/monolog": "^2.1",
-                "phpstan/extension-installer": "^1.0",
-                "phpstan/phpstan": "^0.12.53",
-                "phpstan/phpstan-mockery": "^0.12.7",
+                "monolog/monolog": "^2.2",
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan": "^0.12.78",
+                "phpstan/phpstan-mockery": "^0.12.12",
                 "phpstan/phpstan-phpunit": "^0.12.16",
-                "phpunit/phpunit": "^9.4",
+                "phpunit/phpunit": "^9.5",
                 "squizlabs/php_codesniffer": "^3.5",
-                "symplify/easy-coding-standard": "^8.3",
-                "webignition/object-reflector": "^0.2.0"
+                "symplify/easy-coding-standard": "^9.2",
+                "webignition/object-reflector": "^1.0"
             },
             "type": "library",
             "autoload": {
@@ -10087,31 +10087,32 @@
             ],
             "support": {
                 "issues": "https://github.com/webignition/http-history-container/issues",
-                "source": "https://github.com/webignition/http-history-container/tree/1.15"
+                "source": "https://github.com/webignition/http-history-container/tree/1.16"
             },
-            "time": "2020-11-18T16:03:00+00:00"
+            "time": "2021-02-23T16:47:27+00:00"
         },
         {
             "name": "webignition/object-reflector",
-            "version": "0.2",
+            "version": "1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webignition/object-reflector.git",
-                "reference": "31c0d4bd821f98e9ebae0ce14f6aac3a23da551e"
+                "reference": "c8a679dd2fcf65e8450c59c05caa3a39ecded1a4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webignition/object-reflector/zipball/31c0d4bd821f98e9ebae0ce14f6aac3a23da551e",
-                "reference": "31c0d4bd821f98e9ebae0ce14f6aac3a23da551e",
+                "url": "https://api.github.com/repos/webignition/object-reflector/zipball/c8a679dd2fcf65e8450c59c05caa3a39ecded1a4",
+                "reference": "c8a679dd2fcf65e8450c59c05caa3a39ecded1a4",
                 "shasum": ""
             },
             "require": {
-                "php": ">=7.4"
+                "php": ">=7.4|^8"
             },
             "require-dev": {
-                "phpstan/phpstan": "^0.12.28",
-                "phpunit/phpunit": "^9.2",
-                "squizlabs/php_codesniffer": "^3.5"
+                "phpstan/phpstan": "^0.12.77",
+                "phpunit/phpunit": "^9.5",
+                "squizlabs/php_codesniffer": "^3.5",
+                "symplify/easy-coding-standard": "^9.1"
             },
             "type": "library",
             "autoload": {
@@ -10132,31 +10133,31 @@
             "homepage": "https://github.com/webignition/object-reflector",
             "support": {
                 "issues": "https://github.com/webignition/object-reflector/issues",
-                "source": "https://github.com/webignition/object-reflector/tree/0.2"
+                "source": "https://github.com/webignition/object-reflector/tree/1.0"
             },
-            "time": "2020-06-24T17:20:47+00:00"
+            "time": "2021-02-18T10:13:47+00:00"
         },
         {
             "name": "webignition/symfony-test-service-injector-trait",
-            "version": "0.1",
+            "version": "0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webignition/symfony-test-service-injector-trait.git",
-                "reference": "e67ba26570518bef5fd302e021f33d5b13f7dec5"
+                "reference": "1a59c57b62cbfb3e2a2d4c8fa08131d2865b1a5b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webignition/symfony-test-service-injector-trait/zipball/e67ba26570518bef5fd302e021f33d5b13f7dec5",
-                "reference": "e67ba26570518bef5fd302e021f33d5b13f7dec5",
+                "url": "https://api.github.com/repos/webignition/symfony-test-service-injector-trait/zipball/1a59c57b62cbfb3e2a2d4c8fa08131d2865b1a5b",
+                "reference": "1a59c57b62cbfb3e2a2d4c8fa08131d2865b1a5b",
                 "shasum": ""
             },
             "require": {
-                "php": ">=7.4.0"
+                "php": ">=7.4.0|^8"
             },
             "require-dev": {
-                "phpstan/phpstan": "^0.12.53",
+                "phpstan/phpstan": "^0.12.78",
                 "squizlabs/php_codesniffer": "^3.5",
-                "symplify/easy-coding-standard": "^8.3"
+                "symplify/easy-coding-standard": "^9.2"
             },
             "type": "library",
             "autoload": {
@@ -10186,9 +10187,9 @@
             ],
             "support": {
                 "issues": "https://github.com/webignition/symfony-test-service-injector-trait/issues",
-                "source": "https://github.com/webignition/symfony-test-service-injector-trait/tree/0.1"
+                "source": "https://github.com/webignition/symfony-test-service-injector-trait/tree/0.2"
             },
-            "time": "2020-11-13T11:47:16+00:00"
+            "time": "2021-02-23T15:51:16+00:00"
         },
         {
             "name": "webmozart/assert",
