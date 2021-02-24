@@ -38,7 +38,7 @@
         "phpstan/phpstan-phpunit": "^0.12.17",
         "phpstan/phpstan-symfony": "^0.12.20",
         "phpunit/php-timer": "^5.0",
-        "phpunit/phpunit": "^9.3",
+        "phpunit/phpunit": "^9.5",
         "psr/log": "^1.1",
         "squizlabs/php_codesniffer": "^3.5",
         "symfony/browser-kit": "5.2.*",
