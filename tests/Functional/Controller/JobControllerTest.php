@@ -173,12 +173,12 @@ class JobControllerTest extends AbstractBaseFunctionalTest
                     ]),
                     'create tests' => TestSetupInvokableFactory::setupCollection([
                         (new TestSetup())
-                            ->withSource('/app/source/Test/test1.yml')
-                            ->withTarget('/app/tests/GeneratedTest1.php')
+                            ->withSource('var/basil/source/Test/test1.yml')
+                            ->withTarget('var/basil/tests/GeneratedTest1.php')
                             ->withStepCount(3),
                         (new TestSetup())
-                            ->withSource('/app/source/Test/test2.yml')
-                            ->withTarget('/app/tests/GeneratedTest2.php')
+                            ->withSource('var/basil/source/Test/test2.yml')
+                            ->withTarget('var/basil/tests/GeneratedTest2.php')
                             ->withStepCount(2),
                     ]),
                 ]),

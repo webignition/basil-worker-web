@@ -42,4 +42,6 @@ RUN apt-get -qq update && apt-get -qq -y install  \
   && rm composer.lock \
   && chmod +x /app/bin/console \
   && touch /app/.env \
-  && php bin/console cache:clear --env=prod
+  && php bin/console cache:clear --env=prod \
+  && mkdir -p $COMPILER_SOURCE_DIRECTORY \
+  && chown -R www-data:www-data $COMPILER_SOURCE_DIRECTORY

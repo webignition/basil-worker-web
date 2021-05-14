@@ -49,8 +49,8 @@ class TestSerializerTest extends AbstractBaseFunctionalTest
             'with compiler source path, with compiler target path' => [
                 'setup' => TestSetupInvokableFactory::setup(
                     (new TestSetup())
-                        ->withSource('/app/source/Test/test.yml')
-                        ->withTarget('/app/tests/GeneratedTest.php')
+                        ->withSource('var/basil/source/Test/test.yml')
+                        ->withTarget('var/basil/tests/GeneratedTest.php')
                 ),
                 'expectedSerializedTest' => [
                     'configuration' => [
