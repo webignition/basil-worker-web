@@ -3,6 +3,10 @@ services:
         autowire: true
         autoconfigure: true
 
+    App\Services\SourceFileStore:
+        arguments:
+            $path: '%kernel.project_dir%/%compiler_source_directory%'
+
     App\Tests\Services\JobReadyEventSubscriber:
         public: true
 

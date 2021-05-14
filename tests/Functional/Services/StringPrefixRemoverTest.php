@@ -9,11 +9,10 @@ use webignition\StringPrefixRemover\DefinedStringPrefixRemover;
 
 class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
 {
-    private const COMPILER_SOURCE_DIRECTORY = '/app/source';
-    private const COMPILER_TARGET_DIRECTORY = '/app/tests';
-
     private DefinedStringPrefixRemover $compilerSourceRemover;
     private DefinedStringPrefixRemover $compilerTargetRemover;
+    private string $compilerSourceDirectory;
+    private string $compilerTargetDirectory;
 
     protected function setUp(): void
     {
@@ -28,6 +27,12 @@ class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
         if ($compilerTargetRemover instanceof DefinedStringPrefixRemover) {
             $this->compilerTargetRemover = $compilerTargetRemover;
         }
+
+        $compilerSourceDirectory = self::$container->getParameter('compiler_source_directory');
+        $this->compilerSourceDirectory = is_string($compilerSourceDirectory) ? $compilerSourceDirectory : '';
+
+        $compilerTargetDirectory = self::$container->getParameter('compiler_target_directory');
+        $this->compilerTargetDirectory = is_string($compilerTargetDirectory) ? $compilerTargetDirectory : '';
     }
 
     /**
@@ -35,6 +40,8 @@ class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
      */
     public function testCompilerSourceRemover(string $path, string $expectedPath): void
     {
+        $path = str_replace('{{ prefix }}', $this->compilerSourceDirectory, $path);
+
         self::assertSame($expectedPath, $this->compilerSourceRemover->remove($path));
     }
 
@@ -53,7 +60,7 @@ class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
                 'expectedPath' => '/path/that/does/not/contain/prefix/test.yml',
             ],
             'prefix present' => [
-                'path' => self::COMPILER_SOURCE_DIRECTORY . '/Test/test.yml',
+                'path' => '{{ prefix }}/Test/test.yml',
                 'expectedPath' => 'Test/test.yml',
             ],
         ];
@@ -64,6 +71,8 @@ class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
      */
     public function testCompilerTargetRemover(string $path, string $expectedPath): void
     {
+        $path = str_replace('{{ prefix }}', $this->compilerTargetDirectory, $path);
+
         self::assertSame($expectedPath, $this->compilerTargetRemover->remove($path));
     }
 
@@ -82,7 +91,7 @@ class StringPrefixRemoverTest extends AbstractBaseFunctionalTest
                 'expectedPath' => '/path/that/does/not/contain/prefix/GeneratedTest.php',
             ],
             'prefix present' => [
-                'path' => self::COMPILER_TARGET_DIRECTORY . '/GeneratedTest.php',
+                'path' => '{{ prefix }}/GeneratedTest.php',
                 'expectedPath' => 'GeneratedTest.php',
             ],
         ];
